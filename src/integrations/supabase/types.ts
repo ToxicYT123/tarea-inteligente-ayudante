@@ -9,7 +9,130 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      academic_contexts: {
+        Row: {
+          created_at: string
+          education_level: string
+          id: string
+          is_active: boolean
+          semester: number
+          term: number
+          updated_at: string
+          week: number
+        }
+        Insert: {
+          created_at?: string
+          education_level: string
+          id?: string
+          is_active?: boolean
+          semester: number
+          term: number
+          updated_at?: string
+          week: number
+        }
+        Update: {
+          created_at?: string
+          education_level?: string
+          id?: string
+          is_active?: boolean
+          semester?: number
+          term?: number
+          updated_at?: string
+          week?: number
+        }
+        Relationships: []
+      }
+      attachments: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          storage_path: string
+          task_id: string
+          transcription: string | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          storage_path: string
+          task_id: string
+          transcription?: string | null
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          storage_path?: string
+          task_id?: string
+          transcription?: string | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attachments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          academic_context_id: string | null
+          assignment_type: string | null
+          completed: boolean
+          created_at: string
+          description: string | null
+          due_date: string
+          id: string
+          priority: string
+          subject: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          academic_context_id?: string | null
+          assignment_type?: string | null
+          completed?: boolean
+          created_at?: string
+          description?: string | null
+          due_date: string
+          id?: string
+          priority: string
+          subject: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          academic_context_id?: string | null
+          assignment_type?: string | null
+          completed?: boolean
+          created_at?: string
+          description?: string | null
+          due_date?: string
+          id?: string
+          priority?: string
+          subject?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_academic_context_id_fkey"
+            columns: ["academic_context_id"]
+            isOneToOne: false
+            referencedRelation: "academic_contexts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
