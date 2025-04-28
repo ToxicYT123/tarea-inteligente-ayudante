@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,6 +62,14 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				// Colores personalizados para TareaAssist
+				tareaassist: {
+					primary: '#6366f1',    // Indigo 500
+					secondary: '#8b5cf6',  // Violet 500
+					accent: '#c4b5fd',     // Violet 300
+					light: '#f3f4f6',      // Gray 100
+					dark: '#1f2937',       // Gray 800
 				}
 			},
 			borderRadius: {
@@ -84,11 +93,19 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'pulse-light': {
+					'0%, 100%': { opacity: '1' },
+					'50%': { opacity: '0.7' }
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'pulse-light': 'pulse-light 2s infinite'
+			},
+			backgroundImage: {
+				'gradient-app': 'linear-gradient(to bottom right, #8b5cf6, #6366f1)',
 			}
 		}
 	},
