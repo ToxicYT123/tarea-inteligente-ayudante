@@ -76,7 +76,7 @@ const AIChat: React.FC<AIChatProps> = ({ tasks }) => {
       today.setHours(0, 0, 0, 0);
       
       const todayTasks = pendingTasks.filter(task => {
-        const dueDate = new Date(task.dueDate);
+        const dueDate = new Date(task.due_date);
         dueDate.setHours(0, 0, 0, 0);
         return dueDate.getTime() === today.getTime();
       });
@@ -101,7 +101,7 @@ const AIChat: React.FC<AIChatProps> = ({ tasks }) => {
       
       let response = `Tienes ${pendingTasks.length} tarea(s) pendiente(s):\n\n`;
       pendingTasks.forEach(task => {
-        response += `- ${task.subject}: ${task.title} (Entrega: ${formatDate(task.dueDate)})\n`;
+        response += `- ${task.subject}: ${task.title} (Entrega: ${formatDate(task.due_date)})\n`;
       });
       
       return response;
@@ -119,7 +119,7 @@ const AIChat: React.FC<AIChatProps> = ({ tasks }) => {
       
       let response = `Encontré ${mathTasks.length} tarea(s) de matemáticas:\n\n`;
       mathTasks.forEach(task => {
-        response += `- ${task.title} (Entrega: ${formatDate(task.dueDate)})\n`;
+        response += `- ${task.title} (Entrega: ${formatDate(task.due_date)})\n`;
         if (task.description) {
           response += `  Descripción: ${task.description}\n`;
         }
@@ -135,7 +135,7 @@ const AIChat: React.FC<AIChatProps> = ({ tasks }) => {
       nextWeek.setDate(today.getDate() + 7);
       
       const weekTasks = pendingTasks.filter(task => {
-        const dueDate = new Date(task.dueDate);
+        const dueDate = new Date(task.due_date);
         return dueDate > today && dueDate <= nextWeek;
       });
       
@@ -145,7 +145,7 @@ const AIChat: React.FC<AIChatProps> = ({ tasks }) => {
       
       let response = `Tienes ${weekTasks.length} tarea(s) para la próxima semana:\n\n`;
       weekTasks.forEach(task => {
-        response += `- ${task.subject}: ${task.title} (Entrega: ${formatDate(task.dueDate)})\n`;
+        response += `- ${task.subject}: ${task.title} (Entrega: ${formatDate(task.due_date)})\n`;
       });
       
       return response;

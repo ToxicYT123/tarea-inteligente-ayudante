@@ -73,19 +73,19 @@ export const filterTasksByDueDate = (filter: 'today' | 'week' | 'upcoming' | 'al
   switch (filter) {
     case 'today':
       return tasks.filter(task => {
-        const dueDate = new Date(task.dueDate);
+        const dueDate = new Date(task.due_date);
         dueDate.setHours(0, 0, 0, 0);
         return dueDate.getTime() === today.getTime();
       });
     case 'week':
       return tasks.filter(task => {
-        const dueDate = new Date(task.dueDate);
+        const dueDate = new Date(task.due_date);
         dueDate.setHours(0, 0, 0, 0);
         return dueDate > today && dueDate <= endOfWeek;
       });
     case 'upcoming':
       return tasks.filter(task => {
-        const dueDate = new Date(task.dueDate);
+        const dueDate = new Date(task.due_date);
         dueDate.setHours(0, 0, 0, 0);
         return dueDate > endOfWeek;
       });
@@ -98,8 +98,8 @@ export const filterTasksByDueDate = (filter: 'today' | 'week' | 'upcoming' | 'al
 // Ordenar tareas por fecha de vencimiento
 export const sortTasksByDueDate = (tasks: Task[], ascending: boolean = true): Task[] => {
   return [...tasks].sort((a, b) => {
-    const dateA = new Date(a.dueDate).getTime();
-    const dateB = new Date(b.dueDate).getTime();
+    const dateA = new Date(a.due_date).getTime();
+    const dateB = new Date(b.due_date).getTime();
     return ascending ? dateA - dateB : dateB - dateA;
   });
 };

@@ -43,7 +43,7 @@ const TaskList: React.FC<TaskListProps> = ({
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
-        const dueDate = new Date(task.dueDate);
+        const dueDate = new Date(task.due_date);
         dueDate.setHours(0, 0, 0, 0);
         
         if (filter === 'today') {
@@ -63,7 +63,7 @@ const TaskList: React.FC<TaskListProps> = ({
     })
     .sort((a, b) => {
       if (sort === 'dueDate') {
-        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+        return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
       } else if (sort === 'priority') {
         const priorityValues = { high: 3, medium: 2, low: 1 };
         return priorityValues[b.priority] - priorityValues[a.priority];

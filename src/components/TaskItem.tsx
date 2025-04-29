@@ -108,7 +108,7 @@ const TaskItem: React.FC<TaskItemProps> = ({
   return (
     <Card className={`mb-3 overflow-hidden transition-all duration-200 ${
       task.completed ? 'opacity-75 bg-gray-50' : 
-      isPastDue(task.dueDate) ? 'border-red-300 bg-red-50' : ''
+      isPastDue(task.due_date) ? 'border-red-300 bg-red-50' : ''
     }`}>
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <div className="p-4 flex items-start gap-3">
@@ -128,8 +128,8 @@ const TaskItem: React.FC<TaskItemProps> = ({
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <span className="font-medium">{task.subject}</span>
                   <span>•</span>
-                  <span className={isPastDue(task.dueDate) && !task.completed ? 'text-red-500 font-semibold' : ''}>
-                    {formatDate(task.dueDate)}
+                  <span className={isPastDue(task.due_date) && !task.completed ? 'text-red-500 font-semibold' : ''}>
+                    {formatDate(task.due_date)}
                   </span>
                 </div>
               </div>
