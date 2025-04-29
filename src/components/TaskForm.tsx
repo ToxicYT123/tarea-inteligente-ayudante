@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,8 +42,8 @@ const TaskForm: React.FC<TaskFormProps> = ({ onAddTask }) => {
       subject: subject.trim(),
       title: title.trim(),
       description: description.trim(),
-      dueDate: dueDate.toISOString(),
-      createdAt: new Date().toISOString(),
+      due_date: dueDate.toISOString(),
+      created_at: new Date().toISOString(),
       completed: false,
       attachments: [],
       priority

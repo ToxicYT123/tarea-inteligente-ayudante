@@ -12,11 +12,14 @@ export interface Task {
   subject: string;
   title: string;
   description: string;
-  dueDate: string;
-  createdAt: string;
+  due_date: string;  // Changed from dueDate to due_date
+  created_at: string;  // Changed from createdAt to created_at
   completed: boolean;
   attachments: Attachment[];
   priority: 'low' | 'medium' | 'high';
+  academic_context_id?: string;
+  assignment_type?: string;
+  updated_at?: string;
 }
 
 export interface ChatMessage {

@@ -25,7 +25,23 @@ const Index = () => {
         return;
       }
       
-      setTasks(data || []);
+      // Map the database data to our Task interface format
+      const formattedTasks: Task[] = data?.map(task => ({
+        id: task.id,
+        subject: task.subject,
+        title: task.title,
+        description: task.description || '',
+        due_date: task.due_date,
+        created_at: task.created_at,
+        completed: task.completed,
+        attachments: [], // We'll fetch attachments separately if needed
+        priority: task.priority as 'low' | 'medium' | 'high',
+        academic_context_id: task.academic_context_id,
+        assignment_type: task.assignment_type,
+        updated_at: task.updated_at
+      })) || [];
+      
+      setTasks(formattedTasks);
     };
 
     fetchTasks();
@@ -33,10 +49,20 @@ const Index = () => {
 
   const handleAddTask = (task: Task) => {
     setTasks(prev => [...prev, task]);
-    // Add to Supabase
+    // Add to Supabase - ensure task data matches the schema
     supabase
       .from('tasks')
-      .insert(task)
+      .insert({
+        id: task.id,
+        subject: task.subject,
+        title: task.title,
+        description: task.description,
+        due_date: task.due_date,
+        priority: task.priority,
+        completed: task.completed,
+        academic_context_id: task.academic_context_id,
+        assignment_type: task.assignment_type
+      })
       .then(({ error }) => {
         if (error) console.error('Error adding task:', error);
       });
