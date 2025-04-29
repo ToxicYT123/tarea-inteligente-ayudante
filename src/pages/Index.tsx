@@ -162,7 +162,11 @@ const Index = () => {
           </div>
           
           <div className="lg:col-span-1">
-            <AIChat tasks={tasks} />
+            <AIChat 
+              tasks={tasks} 
+              onAddTask={handleAddTask}
+              onDeleteTask={handleDeleteTask}
+            />
           </div>
         </div>
       </main>

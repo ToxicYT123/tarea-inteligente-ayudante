@@ -5,16 +5,19 @@ import { generateId } from '@/utils/taskUtils';
 import { generateAIResponse } from '@/utils/aiUtils';
 import { MessageSquare } from 'lucide-react';
 import ChatContainer from './chat/ChatContainer';
+import { toast } from "@/components/ui/sonner";
 
 interface AIChatProps {
   tasks: Task[];
+  onAddTask?: (task: Task) => void;
+  onDeleteTask?: (taskId: string) => void;
 }
 
-const AIChat: React.FC<AIChatProps> = ({ tasks }) => {
+const AIChat: React.FC<AIChatProps> = ({ tasks, onAddTask, onDeleteTask }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: generateId(),
-      content: "¡Hola! Soy tu asistente para tareas. Puedes preguntarme cosas como '¿Qué tareas tengo para hoy?' o '¿Cuándo debo entregar el trabajo de matemáticas?'",
+      content: "¡Hola! Soy tu asistente para tareas. Puedo ayudarte a gestionar tus tareas, incluso crearlas o eliminarlas. Prueba diciendo 'crear tarea de matemáticas para mañana' o 'qué tareas tengo para hoy'.",
       sender: 'assistant',
       timestamp: new Date().toISOString()
     }
@@ -43,9 +46,24 @@ const AIChat: React.FC<AIChatProps> = ({ tasks }) => {
     setMessages(prev => [...prev, userMessage]);
     setIsTyping(true);
     
-    // Simular respuesta de IA
+    // Generar respuesta de IA con capacidad para crear/eliminar tareas
     setTimeout(() => {
-      const response = generateAIResponse(input.trim().toLowerCase(), tasks);
+      const response = generateAIResponse(
+        input.trim().toLowerCase(), 
+        tasks,
+        (newTask) => {
+          if (onAddTask) {
+            onAddTask(newTask);
+            toast.success("Tarea creada correctamente");
+          }
+        },
+        (taskId) => {
+          if (onDeleteTask) {
+            onDeleteTask(taskId);
+            toast.success("Tarea eliminada correctamente");
+          }
+        }
+      );
       
       const aiMessage: ChatMessage = {
         id: generateId(),
