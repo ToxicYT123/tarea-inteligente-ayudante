@@ -7,6 +7,9 @@ import AIChat from '@/components/AIChat';
 import AcademicContextForm from '@/components/AcademicContextForm';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from '@/integrations/supabase/client';
+import { Task, Attachment } from '@/types';
+import { generateId } from '@/utils/taskUtils';
+import { toast } from "@/components/ui/sonner";
 
 const Index = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -28,6 +31,77 @@ const Index = () => {
     fetchTasks();
   }, []);
 
+  const handleAddTask = (task: Task) => {
+    setTasks(prev => [...prev, task]);
+    // Add to Supabase
+    supabase
+      .from('tasks')
+      .insert(task)
+      .then(({ error }) => {
+        if (error) console.error('Error adding task:', error);
+      });
+  };
+
+  const handleToggleComplete = (taskId: string) => {
+    const updatedTasks = tasks.map(task => 
+      task.id === taskId ? { ...task, completed: !task.completed } : task
+    );
+    setTasks(updatedTasks);
+    
+    const taskToUpdate = tasks.find(t => t.id === taskId);
+    if (taskToUpdate) {
+      supabase
+        .from('tasks')
+        .update({ completed: !taskToUpdate.completed })
+        .eq('id', taskId)
+        .then(({ error }) => {
+          if (error) console.error('Error updating task:', error);
+        });
+    }
+  };
+
+  const handleAddAttachment = (taskId: string, attachment: Attachment) => {
+    const updatedTasks = tasks.map(task => {
+      if (task.id === taskId) {
+        return {
+          ...task,
+          attachments: [...(task.attachments || []), attachment]
+        };
+      }
+      return task;
+    });
+    setTasks(updatedTasks);
+    
+    supabase
+      .from('attachments')
+      .insert({
+        task_id: taskId,
+        type: attachment.type,
+        name: attachment.name,
+        storage_path: attachment.url
+      })
+      .then(({ error }) => {
+        if (error) console.error('Error adding attachment:', error);
+      });
+  };
+
+  const handleDeleteTask = (taskId: string) => {
+    setTasks(prev => prev.filter(task => task.id !== taskId));
+    
+    supabase
+      .from('tasks')
+      .delete()
+      .eq('id', taskId)
+      .then(({ error }) => {
+        if (error) {
+          console.error('Error deleting task:', error);
+          toast.error("Error al eliminar la tarea");
+        } else {
+          toast.success("Tarea eliminada correctamente");
+        }
+      });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -43,11 +117,16 @@ const Index = () => {
               </TabsList>
               
               <TabsContent value="tasks">
-                <TaskList tasks={tasks} />
+                <TaskList 
+                  tasks={tasks} 
+                  onToggleComplete={handleToggleComplete}
+                  onAddAttachment={handleAddAttachment}
+                  onDeleteTask={handleDeleteTask}
+                />
               </TabsContent>
               
               <TabsContent value="add">
-                <TaskForm />
+                <TaskForm onAddTask={handleAddTask} />
               </TabsContent>
 
               <TabsContent value="context">
