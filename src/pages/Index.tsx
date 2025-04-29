@@ -10,9 +10,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { Task, Attachment } from '@/types';
 import { generateId } from '@/utils/taskUtils';
 import { toast } from "@/components/ui/sonner";
+import { useTheme } from "@/hooks/use-theme";
 
 const Index = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const { theme } = useTheme();
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -128,21 +130,25 @@ const Index = () => {
       });
   };
 
+  const cardClasses = theme === 'dark' 
+    ? 'bg-gray-800/80 border-gray-700/50 shadow-md transition-all duration-300' 
+    : 'bg-white shadow-sm transition-all duration-300';
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className={`min-h-screen bg-background transition-theme ${theme === 'dark' ? 'bg-gray-900' : ''}`}>
       <Header />
 
       <main className="container mx-auto p-4 sm:px-6 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
             <Tabs defaultValue="tasks" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className={`grid w-full grid-cols-3 ${theme === 'dark' ? 'bg-gray-800' : ''}`}>
                 <TabsTrigger value="tasks">Mis Tareas</TabsTrigger>
                 <TabsTrigger value="add">Agregar Tarea</TabsTrigger>
                 <TabsTrigger value="context">Contexto Académico</TabsTrigger>
               </TabsList>
               
-              <TabsContent value="tasks">
+              <TabsContent value="tasks" className={`p-4 rounded-lg ${cardClasses}`}>
                 <TaskList 
                   tasks={tasks} 
                   onToggleComplete={handleToggleComplete}
@@ -151,11 +157,11 @@ const Index = () => {
                 />
               </TabsContent>
               
-              <TabsContent value="add">
+              <TabsContent value="add" className={`p-4 rounded-lg ${cardClasses}`}>
                 <TaskForm onAddTask={handleAddTask} />
               </TabsContent>
 
-              <TabsContent value="context">
+              <TabsContent value="context" className={`p-4 rounded-lg ${cardClasses}`}>
                 <AcademicContextForm />
               </TabsContent>
             </Tabs>
@@ -171,9 +177,9 @@ const Index = () => {
         </div>
       </main>
       
-      <footer className="bg-card border-t py-4">
+      <footer className={`border-t py-4 ${theme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-card border-gray-100'}`}>
         <div className="container mx-auto px-4 text-center text-muted-foreground text-sm">
-          © 2025 TareaAssist - Desarrollado por HABY y Heber Zadkiel Garcia Perez. Todos los derechos reservados.
+          © 2025 HABY TareaAssist - Desarrollado por HABY y Heber Zadkiel Garcia Perez. Todos los derechos reservados.
         </div>
       </footer>
     </div>

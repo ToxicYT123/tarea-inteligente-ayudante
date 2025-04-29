@@ -6,6 +6,7 @@ import { generateAIResponse } from '@/utils/aiUtils';
 import { MessageSquare } from 'lucide-react';
 import ChatContainer from './chat/ChatContainer';
 import { toast } from "@/components/ui/sonner";
+import { useTheme } from "@/hooks/use-theme";
 
 interface AIChatProps {
   tasks: Task[];
@@ -25,6 +26,7 @@ const AIChat: React.FC<AIChatProps> = ({ tasks, onAddTask, onDeleteTask }) => {
   
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { theme } = useTheme();
 
   useEffect(() => {
     scrollToBottom();
@@ -78,8 +80,16 @@ const AIChat: React.FC<AIChatProps> = ({ tasks, onAddTask, onDeleteTask }) => {
   };
 
   return (
-    <div className="flex flex-col rounded-lg border shadow-sm bg-white h-[500px]">
-      <div className="p-4 border-b flex items-center space-x-2 bg-tareaassist-primary text-white">
+    <div className={`flex flex-col rounded-lg border shadow-sm h-[500px] transition-all duration-300 ${
+      theme === 'dark' 
+        ? 'bg-gray-800/90 border-gray-700' 
+        : 'bg-white'
+    }`}>
+      <div className={`p-4 border-b flex items-center space-x-2 ${
+        theme === 'dark'
+          ? 'border-gray-700 bg-gradient-app-dark'
+          : 'bg-tareaassist-primary'
+      } text-white`}>
         <MessageSquare className="h-5 w-5" />
         <h2 className="font-medium">Asistente TareaAssist</h2>
       </div>

@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useTheme } from "@/hooks/use-theme";
 
 interface ChatInputFormProps {
   onSubmit: (message: string) => void;
@@ -10,6 +11,7 @@ interface ChatInputFormProps {
 
 const ChatInputForm: React.FC<ChatInputFormProps> = ({ onSubmit, isTyping }) => {
   const [input, setInput] = useState('');
+  const { theme } = useTheme();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,9 +27,14 @@ const ChatInputForm: React.FC<ChatInputFormProps> = ({ onSubmit, isTyping }) => 
         value={input}
         onChange={(e) => setInput(e.target.value)}
         placeholder="Escribe tu pregunta..."
-        className="flex-grow"
+        className={`flex-grow ${theme === 'dark' ? 'bg-gray-700 border-gray-600' : ''}`}
       />
-      <Button type="submit" size="sm" disabled={isTyping}>
+      <Button 
+        type="submit" 
+        size="sm" 
+        disabled={isTyping}
+        className={theme === 'dark' ? 'bg-tareaassist-dark-primary hover:bg-tareaassist-dark-secondary' : ''}
+      >
         Enviar
       </Button>
     </form>

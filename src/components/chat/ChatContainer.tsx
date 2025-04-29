@@ -1,12 +1,11 @@
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Task, ChatMessage } from '@/types';
+import React from 'react';
+import { ChatMessage } from '@/types';
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { generateId } from '@/utils/taskUtils';
-import { generateAIResponse } from '@/utils/aiUtils';
 import ChatMessageComponent from './ChatMessage';
 import TypingIndicator from './TypingIndicator';
 import ChatInputForm from './ChatInputForm';
+import { useTheme } from "@/hooks/use-theme";
 
 interface ChatContainerProps {
   messages: ChatMessage[];
@@ -21,6 +20,8 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
   onNewMessage,
   messagesEndRef
 }) => {
+  const { theme } = useTheme();
+  
   return (
     <>
       <ScrollArea className="flex-1 p-4">
@@ -34,7 +35,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
         </div>
       </ScrollArea>
       
-      <div className="p-4 border-t">
+      <div className={`p-4 border-t ${theme === 'dark' ? 'border-gray-700' : ''}`}>
         <ChatInputForm onSubmit={onNewMessage} isTyping={isTyping} />
       </div>
     </>

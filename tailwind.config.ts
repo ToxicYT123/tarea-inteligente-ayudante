@@ -70,6 +70,9 @@ export default {
 					accent: '#c4b5fd',     // Violet 300
 					light: '#f3f4f6',      // Gray 100
 					dark: '#1f2937',       // Gray 800
+					'dark-primary': '#8b5cf6', // Color primario en modo oscuro
+					'dark-secondary': '#4f46e5', // Color secundario en modo oscuro
+					'dark-accent': '#7c3aed',  // Color de acento en modo oscuro
 				}
 			},
 			borderRadius: {
@@ -106,6 +109,7 @@ export default {
 			},
 			backgroundImage: {
 				'gradient-app': 'linear-gradient(to bottom right, #8b5cf6, #6366f1)',
+				'gradient-app-dark': 'linear-gradient(to bottom right, #7c3aed, #4f46e5)', // Gradiente para modo oscuro
 			}
 		}
 	},
