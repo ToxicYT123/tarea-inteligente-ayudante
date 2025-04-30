@@ -136,13 +136,13 @@ const Index = () => {
 
   const cardClasses = theme === 'dark' 
     ? 'bg-gray-800/80 border-gray-700/50 shadow-md transition-all duration-300' 
-    : 'bg-white shadow-sm transition-all duration-300';
+    : 'bg-white shadow-sm backdrop-blur-sm border-gray-100/50 transition-all duration-300';
 
   return (
-    <div className={`min-h-screen bg-background transition-theme ${theme === 'dark' ? 'bg-gray-900' : ''}`}>
+    <div className={`min-h-screen bg-background transition-theme ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <Header />
 
-      <main className="container mx-auto p-4 sm:px-6 py-6">
+      <main className="container mx-auto p-4 sm:px-6 py-6 pb-20">
         <div className="flex justify-between items-center mb-4">
           <div className="flex items-center gap-2">
             <TutorialGuide />
@@ -161,7 +161,7 @@ const Index = () => {
                 <TabsTrigger value="context">Contexto</TabsTrigger>
               </TabsList>
               
-              <TabsContent value="tasks" className={`p-4 rounded-lg ${cardClasses}`}>
+              <TabsContent value="tasks" className={`p-4 rounded-lg border ${cardClasses}`}>
                 <TaskList 
                   tasks={tasks} 
                   onToggleComplete={handleToggleComplete}
@@ -170,15 +170,15 @@ const Index = () => {
                 />
               </TabsContent>
               
-              <TabsContent value="add" className={`p-4 rounded-lg ${cardClasses}`}>
+              <TabsContent value="add" className={`p-4 rounded-lg border ${cardClasses}`}>
                 <TaskForm onAddTask={handleAddTask} />
               </TabsContent>
               
-              <TabsContent value="stats" className={`p-4 rounded-lg ${cardClasses}`}>
+              <TabsContent value="stats" className={`p-4 rounded-lg border ${cardClasses}`}>
                 <TaskStats tasks={tasks} />
               </TabsContent>
 
-              <TabsContent value="context" className={`p-4 rounded-lg ${cardClasses}`}>
+              <TabsContent value="context" className={`p-4 rounded-lg border ${cardClasses}`}>
                 <AcademicContextForm />
               </TabsContent>
             </Tabs>
@@ -194,7 +194,7 @@ const Index = () => {
         </div>
       </main>
       
-      <footer className={`border-t py-4 ${theme === 'dark' ? 'bg-gray-900 border-gray-800' : 'bg-card border-gray-100'}`}>
+      <footer className={`fixed bottom-0 left-0 right-0 border-t py-3 z-10 ${theme === 'dark' ? 'bg-gray-900/90 backdrop-blur-sm border-gray-800' : 'bg-white/90 backdrop-blur-sm border-gray-100'}`}>
         <div className="container mx-auto px-4 text-center text-muted-foreground text-sm">
           © 2025 HABY TareaAssist - Desarrollado por HABY y Heber Zadkiel Garcia Perez. Todos los derechos reservados.
         </div>

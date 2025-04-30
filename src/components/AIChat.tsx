@@ -2,14 +2,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Task, ChatMessage } from '@/types';
 import { generateId } from '@/utils/taskUtils';
-import { generateAIResponse } from '@/utils/aiUtils';
+import { generateAIResponse, validateApiKey } from '@/utils/aiUtils';
 import { MessageSquare, Loader2 } from 'lucide-react';
 import ChatContainer from './chat/ChatContainer';
 import { toast } from "@/components/ui/sonner";
 import { useTheme } from "@/hooks/use-theme";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { InfoIcon, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 interface AIChatProps {
   tasks: Task[];
@@ -30,6 +31,8 @@ const AIChat: React.FC<AIChatProps> = ({ tasks, onAddTask, onDeleteTask }) => {
   const [isTyping, setIsTyping] = useState(false);
   const [apiKey, setApiKey] = useState<string>(localStorage.getItem('openai_api_key') || '');
   const [showApiKeyInput, setShowApiKeyInput] = useState<boolean>(!localStorage.getItem('openai_api_key'));
+  const [isValidatingKey, setIsValidatingKey] = useState(false);
+  const [keyValidationStatus, setKeyValidationStatus] = useState<'none' | 'valid' | 'invalid' | 'checking'>('none');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { theme } = useTheme();
 
@@ -39,6 +42,34 @@ const AIChat: React.FC<AIChatProps> = ({ tasks, onAddTask, onDeleteTask }) => {
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+  
+  const handleValidateApiKey = async () => {
+    if (!apiKey.trim()) {
+      toast.error('Por favor, ingresa una API Key');
+      return;
+    }
+    
+    setIsValidatingKey(true);
+    setKeyValidationStatus('checking');
+    
+    try {
+      const isValid = await validateApiKey(apiKey.trim());
+      
+      if (isValid) {
+        setKeyValidationStatus('valid');
+        toast.success('API Key válida');
+      } else {
+        setKeyValidationStatus('invalid');
+        toast.error('API Key inválida o error de conexión');
+      }
+    } catch (error) {
+      console.error('Error validando la API Key:', error);
+      setKeyValidationStatus('invalid');
+      toast.error('Error al validar la API Key');
+    } finally {
+      setIsValidatingKey(false);
+    }
   };
   
   const handleSaveApiKey = () => {
@@ -118,14 +149,14 @@ const AIChat: React.FC<AIChatProps> = ({ tasks, onAddTask, onDeleteTask }) => {
   };
 
   return (
-    <div className={`flex flex-col rounded-lg border shadow-sm h-[500px] transition-all duration-300 ${
+    <div className={`flex flex-col rounded-lg border shadow-md h-[500px] transition-all duration-300 ${
       theme === 'dark' 
         ? 'bg-gray-800/90 border-gray-700' 
-        : 'bg-white'
+        : 'bg-white/90 backdrop-blur-sm border-gray-200'
     }`}>
       <div className={`p-4 border-b flex items-center space-x-2 ${
         theme === 'dark'
-          ? 'border-gray-700 bg-tareaassist-dark-primary text-white'
+          ? 'border-gray-700 bg-gradient-to-r from-tareaassist-dark-primary to-tareaassist-dark-secondary text-white'
           : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white'
       }`}>
         <MessageSquare className="h-5 w-5" />
@@ -134,34 +165,66 @@ const AIChat: React.FC<AIChatProps> = ({ tasks, onAddTask, onDeleteTask }) => {
       
       {showApiKeyInput ? (
         <div className="flex-1 p-4 flex flex-col justify-center items-center">
-          <div className={`max-w-md w-full p-4 rounded-lg border ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
+          <div className={`max-w-md w-full p-5 rounded-xl border shadow-sm ${theme === 'dark' ? 'border-gray-700 bg-gray-800/70' : 'border-gray-200 bg-white/80'}`}>
             <h3 className="text-lg font-medium mb-2">Configuración de IA</h3>
             <p className="text-sm text-muted-foreground mb-4">
               Para utilizar la inteligencia artificial avanzada, necesitas proporcionar una API Key de OpenAI.
             </p>
             
             <div className="space-y-4">
-              <Alert variant="default" className={theme === 'dark' ? 'bg-gray-700 border-gray-600' : ''}>
+              <Alert variant={theme === 'dark' ? 'default' : 'default'} className={`${theme === 'dark' ? 'bg-gray-700/70 border-gray-600' : 'bg-blue-50 border-blue-200'} border-l-4 border-l-primary`}>
+                <InfoIcon className="h-4 w-4" />
                 <AlertDescription>
                   Tu API Key se guardará localmente en este navegador y no se compartirá con terceros.
                 </AlertDescription>
               </Alert>
               
-              <Input
-                type="password"
-                placeholder="Ingresa tu API Key de OpenAI"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                className={theme === 'dark' ? 'bg-gray-700 border-gray-600' : ''}
-              />
-              
-              <Button 
-                onClick={handleSaveApiKey} 
-                className="w-full"
-                disabled={!apiKey.trim()}
-              >
-                Guardar y Continuar
-              </Button>
+              <div className="space-y-2">
+                <div className="relative">
+                  <Input
+                    type="password"
+                    placeholder="Ingresa tu API Key de OpenAI"
+                    value={apiKey}
+                    onChange={(e) => {
+                      setApiKey(e.target.value);
+                      setKeyValidationStatus('none');
+                    }}
+                    className={`pr-10 ${theme === 'dark' ? 'bg-gray-700 border-gray-600' : ''} ${
+                      keyValidationStatus === 'valid' ? 'border-green-500 focus:border-green-500' :
+                      keyValidationStatus === 'invalid' ? 'border-red-500 focus:border-red-500' : ''
+                    }`}
+                  />
+                  {keyValidationStatus === 'valid' && (
+                    <CheckCircle2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-green-500" />
+                  )}
+                  {keyValidationStatus === 'invalid' && (
+                    <AlertCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-red-500" />
+                  )}
+                </div>
+                
+                <div className="flex justify-between gap-2">
+                  <Button 
+                    variant="outline"
+                    onClick={handleValidateApiKey} 
+                    className="w-1/2"
+                    disabled={!apiKey.trim() || isValidatingKey}
+                  >
+                    {isValidatingKey ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Validando...
+                      </>
+                    ) : "Verificar API Key"}
+                  </Button>
+                  <Button 
+                    onClick={handleSaveApiKey} 
+                    className="w-1/2"
+                    disabled={!apiKey.trim() || keyValidationStatus === 'invalid' || isValidatingKey}
+                  >
+                    Guardar y Continuar
+                  </Button>
+                </div>
+              </div>
               
               <p className="text-xs text-center text-muted-foreground mt-2">
                 Si no tienes una API Key, puedes seguir usando el asistente básico sin conectar a OpenAI.{' '}

@@ -28,10 +28,30 @@
     <!-- Tema -->
     <meta name="theme-color" content="#9b87f5" />
     
+    <!-- Preload logo image -->
+    <link rel="preload" href="/haby-logo.png" as="image" type="image/png">
+    
     <!-- Environment Variables -->
     <script>
       // Establecer la variable de entorno para la clave de API (si existe en localStorage)
       window.VITE_OPENAI_API_KEY = localStorage.getItem('openai_api_key') || '';
+      
+      // Establecer el contexto de la plataforma para la IA
+      window.PLATFORM_CONTEXT = {
+        name: "HABY TareaAssist",
+        description: "Plataforma educativa para gestionar tareas escolares",
+        features: [
+          "Gestión de tareas académicas",
+          "Organización por materias y prioridades",
+          "Asistente IA para crear y eliminar tareas",
+          "Estadísticas de progreso académico"
+        ],
+        version: "1.0.0"
+      };
+      
+      // Precargar el logo
+      const preloadLogo = new Image();
+      preloadLogo.src = '/haby-logo.png';
     </script>
   </head>
 

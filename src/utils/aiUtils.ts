@@ -4,6 +4,23 @@ import { generateId } from './taskUtils';
 
 const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
 
+export async function validateApiKey(apiKey: string): Promise<boolean> {
+  try {
+    const response = await fetch('https://api.openai.com/v1/models', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    return response.status === 200;
+  } catch (error) {
+    console.error("Error validando API key:", error);
+    return false;
+  }
+}
+
 export async function generateAIResponse(
   userInput: string,
   tasks: Task[],
@@ -25,6 +42,9 @@ export async function generateAIResponse(
       Si el usuario pide eliminar una tarea, busca por título o materia entre las tareas existentes.
       
       Tu tono debe ser amigable, profesional y útil. Limita tus respuestas a 3-4 oraciones máximo.
+      
+      El proyecto HABY TareaAssist es una aplicación educativa creada para estudiantes, diseñada para ayudar 
+      a organizar tareas escolares, gestionar entregas y mejorar la productividad académica.
     `;
 
     // Obtener contexto de las tareas actuales
