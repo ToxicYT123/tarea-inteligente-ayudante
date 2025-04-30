@@ -11,6 +11,10 @@ import { Task, Attachment } from '@/types';
 import { generateId } from '@/utils/taskUtils';
 import { toast } from "@/components/ui/sonner";
 import { useTheme } from "@/hooks/use-theme";
+import TutorialGuide from '@/components/TutorialGuide';
+import TaskStats from '@/components/TaskStats';
+import NotificationCenter from '@/components/NotificationCenter';
+import CalendarSync from '@/components/CalendarSync';
 
 const Index = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -139,13 +143,22 @@ const Index = () => {
       <Header />
 
       <main className="container mx-auto p-4 sm:px-6 py-6">
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex items-center gap-2">
+            <TutorialGuide />
+            <NotificationCenter tasks={tasks} onToggleComplete={handleToggleComplete} />
+            <CalendarSync tasks={tasks} />
+          </div>
+        </div>
+        
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
             <Tabs defaultValue="tasks" className="w-full">
-              <TabsList className={`grid w-full grid-cols-3 ${theme === 'dark' ? 'bg-gray-800' : ''}`}>
+              <TabsList className={`grid w-full grid-cols-4 ${theme === 'dark' ? 'bg-gray-800' : ''}`}>
                 <TabsTrigger value="tasks">Mis Tareas</TabsTrigger>
                 <TabsTrigger value="add">Agregar Tarea</TabsTrigger>
-                <TabsTrigger value="context">Contexto Académico</TabsTrigger>
+                <TabsTrigger value="stats">Estadísticas</TabsTrigger>
+                <TabsTrigger value="context">Contexto</TabsTrigger>
               </TabsList>
               
               <TabsContent value="tasks" className={`p-4 rounded-lg ${cardClasses}`}>
@@ -159,6 +172,10 @@ const Index = () => {
               
               <TabsContent value="add" className={`p-4 rounded-lg ${cardClasses}`}>
                 <TaskForm onAddTask={handleAddTask} />
+              </TabsContent>
+              
+              <TabsContent value="stats" className={`p-4 rounded-lg ${cardClasses}`}>
+                <TaskStats tasks={tasks} />
               </TabsContent>
 
               <TabsContent value="context" className={`p-4 rounded-lg ${cardClasses}`}>

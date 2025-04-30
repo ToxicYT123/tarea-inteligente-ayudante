@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTheme } from "@/hooks/use-theme";
+import { Send } from 'lucide-react';
 
 interface ChatInputFormProps {
   onSubmit: (message: string) => void;
@@ -28,14 +29,16 @@ const ChatInputForm: React.FC<ChatInputFormProps> = ({ onSubmit, isTyping }) => 
         onChange={(e) => setInput(e.target.value)}
         placeholder="Escribe tu pregunta..."
         className={`flex-grow ${theme === 'dark' ? 'bg-gray-700 border-gray-600' : ''}`}
+        disabled={isTyping}
       />
       <Button 
         type="submit" 
         size="sm" 
-        disabled={isTyping}
-        className={theme === 'dark' ? 'bg-tareaassist-dark-primary hover:bg-tareaassist-dark-secondary' : ''}
+        disabled={isTyping || !input.trim()}
+        className={`${theme === 'dark' ? 'bg-tareaassist-dark-primary hover:bg-tareaassist-dark-secondary' : ''}`}
       >
-        Enviar
+        <Send size={16} className="sm:mr-1" />
+        <span className="hidden sm:inline">Enviar</span>
       </Button>
     </form>
   );
