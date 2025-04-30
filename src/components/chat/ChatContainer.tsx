@@ -47,7 +47,9 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
         <ChatInputForm onSubmit={onNewMessage} isTyping={isTyping} />
       </div>
       
-      <style jsx global>{`
+      {/* Using style tag correctly with standard React attributes */}
+      <style>
+        {`
         .scrollbar-dark::-webkit-scrollbar {
           width: 8px;
         }
@@ -83,7 +85,8 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
         .scrollbar-light::-webkit-scrollbar-thumb:hover {
           background: rgba(139, 92, 246, 0.5);
         }
-      `}</style>
+        `}
+      </style>
     </div>
   );
 };
