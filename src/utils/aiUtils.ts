@@ -1,329 +1,279 @@
 
-import { Task } from "@/types";
-import { formatDate } from "./taskUtils";
-import { generateId } from "@/utils/taskUtils";
+import { Task } from '@/types';
+import { generateId } from './taskUtils';
 
-/**
- * Analiza si el mensaje del usuario es un comando para crear o eliminar una tarea
- */
-const isTaskCreationCommand = (query: string): boolean => {
-  const lowerQuery = query.toLowerCase();
-  return (
-    (lowerQuery.includes('crear') || lowerQuery.includes('nueva') || lowerQuery.includes('agregar')) &&
-    lowerQuery.includes('tarea')
-  );
-};
+const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
 
-const isTaskDeletionCommand = (query: string): boolean => {
-  const lowerQuery = query.toLowerCase();
-  return (
-    (lowerQuery.includes('borrar') || lowerQuery.includes('eliminar') || lowerQuery.includes('quitar')) &&
-    lowerQuery.includes('tarea')
-  );
-};
-
-/**
- * Extrae los detalles de la tarea del mensaje del usuario
- */
-const extractTaskDetails = (query: string): Partial<Task> => {
-  const lowerQuery = query.toLowerCase();
-  
-  // Intentar extraer el título
-  let title = "";
-  const titleMatch = query.match(/(?:tarea|llamada|titulada)\s+["'](.+?)["']/i);
-  if (titleMatch) {
-    title = titleMatch[1];
-  } else {
-    // Tomar el resto del texto después de "crear tarea" como título
-    const afterCommand = query.split(/crear\s+tarea\s+|nueva\s+tarea\s+|agregar\s+tarea\s+/i)[1];
-    if (afterCommand) {
-      title = afterCommand.split('para')[0].trim();
-      if (title.endsWith('.')) {
-        title = title.substring(0, title.length - 1);
-      }
+export async function generateAIResponse(
+  userInput: string,
+  tasks: Task[],
+  onAddTask?: (task: Task) => void,
+  onDeleteTask?: (taskId: string) => void
+): Promise<string> {
+  try {
+    if (!OPENAI_API_KEY) {
+      console.error("OpenAI API key not found. Using fallback response.");
+      return generateFallbackResponse(userInput, tasks, onAddTask, onDeleteTask);
     }
-  }
 
-  // Intentar extraer la materia
-  let subject = "General";
-  const subjectMatches = [
-    /(?:materia|asignatura|clase)\s+(?:de\s+)?["']?([^"']+)["']?/i,
-    /(?:para|en|de)\s+(?:la\s+)?(?:materia|asignatura|clase)\s+(?:de\s+)?["']?([^"']+)["']?/i
-  ];
-  
-  for (const pattern of subjectMatches) {
-    const match = query.match(pattern);
-    if (match) {
-      subject = match[1].trim();
-      if (subject.endsWith('.')) {
-        subject = subject.substring(0, subject.length - 1);
-      }
-      break;
-    }
-  }
-
-  // Extraer fecha de entrega
-  let dueDate = new Date();
-  if (lowerQuery.includes('para mañana') || lowerQuery.includes('para manana')) {
-    dueDate.setDate(dueDate.getDate() + 1);
-  } else if (lowerQuery.includes('próxima semana') || lowerQuery.includes('proxima semana')) {
-    dueDate.setDate(dueDate.getDate() + 7);
-  } else if (lowerQuery.includes('siguiente semana')) {
-    dueDate.setDate(dueDate.getDate() + 7);
-  } else {
-    // Buscar patrones de fecha como "27 de mayo" o "5 de abril"
-    const dateMatch = query.match(/(\d{1,2})\s+de\s+([a-zA-ZáéíóúÁÉÍÓÚ]+)/i);
-    if (dateMatch) {
-      const day = parseInt(dateMatch[1]);
-      const monthText = dateMatch[2].toLowerCase();
+    // Crear el sistema y el contexto para el mensaje
+    const systemPrompt = `
+      Eres un asistente de tareas escolares llamado HABY TareaAssist. Ayudas a estudiantes a gestionar sus tareas académicas.
+      Puedes crear nuevas tareas y eliminar tareas existentes cuando el usuario te lo pida.
       
-      const months: {[key: string]: number} = {
-        'enero': 0, 'febrero': 1, 'marzo': 2, 'abril': 3, 'mayo': 4, 'junio': 5,
-        'julio': 6, 'agosto': 7, 'septiembre': 8, 'octubre': 9, 'noviembre': 10, 'diciembre': 11
-      };
+      Si el usuario pide crear una tarea, extrae los detalles (materia, título, fecha de entrega, prioridad) y responde confirmando.
+      Si el usuario pide eliminar una tarea, busca por título o materia entre las tareas existentes.
       
-      if (months[monthText] !== undefined) {
-        dueDate.setMonth(months[monthText]);
-        dueDate.setDate(day);
-        
-        // Si la fecha ya pasó este año, asumir que es para el próximo año
-        if (dueDate < new Date()) {
-          dueDate.setFullYear(dueDate.getFullYear() + 1);
-        }
-      }
+      Tu tono debe ser amigable, profesional y útil. Limita tus respuestas a 3-4 oraciones máximo.
+    `;
+
+    // Obtener contexto de las tareas actuales
+    const taskContext = tasks.map(task => 
+      `Tarea: ${task.title} (ID: ${task.id}, Materia: ${task.subject}, Fecha: ${new Date(task.due_date).toLocaleDateString()}, Completada: ${task.completed ? 'Sí' : 'No'})`
+    ).join('\n');
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${OPENAI_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Contexto de tareas actuales:\n${taskContext}\n\nConsulta del usuario: ${userInput}` }
+        ],
+        max_tokens: 250,
+        temperature: 0.7
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error en la API de OpenAI: ${response.status}`);
     }
+
+    const data = await response.json();
+    const aiMessage = data.choices[0].message.content;
+    
+    // Procesar la respuesta para detectar comandos de creación/eliminación de tareas
+    processAICommandsFromMessage(aiMessage, userInput, tasks, onAddTask, onDeleteTask);
+    
+    return aiMessage;
+  } catch (error) {
+    console.error("Error al generar respuesta de IA:", error);
+    return generateFallbackResponse(userInput, tasks, onAddTask, onDeleteTask);
   }
+}
 
-  // Extraer prioridad
-  let priority: 'low' | 'medium' | 'high' = 'medium';
-  if (lowerQuery.includes('alta prioridad') || lowerQuery.includes('importante') || lowerQuery.includes('urgente')) {
-    priority = 'high';
-  } else if (lowerQuery.includes('baja prioridad') || lowerQuery.includes('poco importante')) {
-    priority = 'low';
-  }
-
-  // Extraer descripción
-  let description = "";
-  const descMatches = [
-    /descripción\s*:\s*["'](.+?)["']/i,
-    /descripcion\s*:\s*["'](.+?)["']/i,
-    /con\s+(?:la\s+)?descripción\s*(?:de\s+)?["'](.+?)["']/i,
-    /con\s+(?:la\s+)?descripcion\s*(?:de\s+)?["'](.+?)["']/i,
-  ];
-  
-  for (const pattern of descMatches) {
-    const match = query.match(pattern);
-    if (match) {
-      description = match[1].trim();
-      break;
-    }
-  }
-
-  return {
-    title: title || "Nueva tarea",
-    subject: subject,
-    description: description,
-    due_date: dueDate.toISOString(),
-    priority: priority,
-    completed: false,
-    attachments: []
-  };
-};
-
-/**
- * Crea una nueva tarea basada en el mensaje del usuario
- */
-export const createTaskFromQuery = (query: string): Task => {
-  const taskDetails = extractTaskDetails(query);
-  
-  return {
-    id: generateId(),
-    title: taskDetails.title || "Nueva tarea",
-    subject: taskDetails.subject || "General",
-    description: taskDetails.description || "",
-    due_date: taskDetails.due_date || new Date().toISOString(),
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    priority: taskDetails.priority || "medium",
-    completed: false,
-    attachments: []
-  };
-};
-
-/**
- * Identifica la tarea a eliminar basada en el mensaje del usuario
- */
-export const findTaskToDelete = (query: string, tasks: Task[]): Task | null => {
-  const lowerQuery = query.toLowerCase();
-  
-  // Buscar si el usuario menciona el título exacto de la tarea
-  for (const task of tasks) {
-    if (lowerQuery.includes(task.title.toLowerCase())) {
-      return task;
-    }
-  }
-  
-  // Buscar si el usuario menciona la materia y hay solo una tarea de esa materia
-  const subjectMatches = [
-    /(?:borrar|eliminar|quitar)\s+(?:la\s+)?tarea\s+(?:de\s+)?([a-záéíóúñ\s]+)/i,
-    /(?:borrar|eliminar|quitar)\s+(?:la\s+)?tarea\s+(?:para|en|de)\s+([a-záéíóúñ\s]+)/i,
-  ];
-  
-  for (const pattern of subjectMatches) {
-    const match = query.match(pattern);
-    if (match) {
-      const subject = match[1].trim();
-      const matchingTasks = tasks.filter(t => 
-        t.subject.toLowerCase().includes(subject.toLowerCase())
-      );
-      
-      if (matchingTasks.length === 1) {
-        return matchingTasks[0];
-      }
-    }
-  }
-  
-  return null;
-};
-
-/**
- * Genera una respuesta de IA basada en la consulta del usuario y tareas disponibles
- */
-export const generateAIResponse = (query: string, tasks: Task[], onCreateTask?: (task: Task) => void, onDeleteTask?: (taskId: string) => void): string => {
-  const lowerQuery = query.toLowerCase();
+// Función de respaldo cuando la API falla
+function generateFallbackResponse(
+  userInput: string,
+  tasks: Task[],
+  onAddTask?: (task: Task) => void,
+  onDeleteTask?: (taskId: string) => void
+): string {
+  const input = userInput.toLowerCase();
   
   // Detectar si el usuario quiere crear una tarea
-  if (isTaskCreationCommand(query)) {
-    const newTask = createTaskFromQuery(query);
+  if (input.includes('crear tarea') || input.includes('nueva tarea') || input.includes('agregar tarea')) {
+    const subjects = ['Matemáticas', 'Español', 'Ciencias', 'Historia', 'Inglés', 'Física', 'Química', 'Biología'];
+    const randomSubject = subjects[Math.floor(Math.random() * subjects.length)];
     
-    if (onCreateTask) {
-      onCreateTask(newTask);
+    // Intentar extraer información del mensaje del usuario
+    let subject = randomSubject;
+    let title = 'Tarea';
+    let dueDate = new Date();
+    let priority = 'medium';
+    
+    // Extraer materia
+    for (const possibleSubject of subjects) {
+      if (input.includes(possibleSubject.toLowerCase())) {
+        subject = possibleSubject;
+        break;
+      }
     }
     
-    return `¡He creado una nueva tarea!\n\n` +
-           `📝 **${newTask.title}**\n` +
-           `📚 Materia: ${newTask.subject}\n` +
-           `📅 Fecha de entrega: ${formatDate(newTask.due_date)}\n` +
-           `🚩 Prioridad: ${newTask.priority === 'high' ? 'Alta' : newTask.priority === 'medium' ? 'Media' : 'Baja'}\n` +
-           (newTask.description ? `📋 Descripción: ${newTask.description}\n` : '') +
-           `\nLa tarea ha sido agregada a tu lista.`;
+    // Extraer título (lo que viene después de "sobre" o "de")
+    const titleMatches = input.match(/(?:sobre|de) ([^,\.]+)/i);
+    if (titleMatches && titleMatches[1]) {
+      title = titleMatches[1].trim();
+    }
+    
+    // Extraer fecha
+    if (input.includes('mañana')) {
+      dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + 1);
+    } else if (input.includes('próxima semana') || input.includes('proxima semana')) {
+      dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + 7);
+    } else if (input.includes('hoy')) {
+      dueDate = new Date();
+    }
+    
+    // Extraer prioridad
+    if (input.includes('alta') || input.includes('urgente') || input.includes('importante')) {
+      priority = 'high';
+    } else if (input.includes('baja') || input.includes('puede esperar')) {
+      priority = 'low';
+    }
+    
+    // Crear la tarea
+    if (onAddTask) {
+      const newTask: Task = {
+        id: generateId(),
+        subject,
+        title: title.charAt(0).toUpperCase() + title.slice(1),
+        description: "Tarea creada por asistente AI",
+        due_date: dueDate.toISOString(),
+        created_at: new Date().toISOString(),
+        completed: false,
+        attachments: [],
+        priority: priority as 'low' | 'medium' | 'high',
+        academic_context_id: null,
+        assignment_type: 'homework',
+        updated_at: new Date().toISOString()
+      };
+      
+      onAddTask(newTask);
+      
+      return `He creado una nueva tarea de ${subject} sobre "${title}" para entregar el ${dueDate.toLocaleDateString()}. La he configurado con prioridad ${priority === 'high' ? 'alta' : priority === 'medium' ? 'media' : 'baja'}.`;
+    }
   }
   
   // Detectar si el usuario quiere eliminar una tarea
-  if (isTaskDeletionCommand(query)) {
-    const taskToDelete = findTaskToDelete(query, tasks);
-    
-    if (taskToDelete && onDeleteTask) {
-      onDeleteTask(taskToDelete.id);
-      return `He eliminado la tarea "${taskToDelete.title}" de tu lista.`;
-    } else {
-      return "No pude identificar qué tarea deseas eliminar. Por favor, sé más específico mencionando el título exacto de la tarea o proporciona más detalles.";
+  else if (input.includes('eliminar tarea') || input.includes('borrar tarea') || input.includes('quitar tarea')) {
+    const tasksToSearch = [...tasks].filter(task => !task.completed);
+    if (tasksToSearch.length === 0) {
+      return 'No tienes tareas pendientes para eliminar.';
     }
+    
+    // Intentar encontrar la tarea mencionada
+    let foundTask = null;
+    
+    // Buscar por título
+    for (const task of tasksToSearch) {
+      if (input.includes(task.title.toLowerCase())) {
+        foundTask = task;
+        break;
+      }
+    }
+    
+    // Si no encuentra por título, buscar por materia
+    if (!foundTask) {
+      for (const task of tasksToSearch) {
+        if (input.includes(task.subject.toLowerCase())) {
+          foundTask = task;
+          break;
+        }
+      }
+    }
+    
+    // Si encuentra una tarea, eliminarla
+    if (foundTask && onDeleteTask) {
+      onDeleteTask(foundTask.id);
+      return `He eliminado la tarea "${foundTask.title}" de ${foundTask.subject}.`;
+    }
+    
+    return 'No encontré una tarea específica para eliminar. Por favor, menciona el título o la materia de la tarea que quieres eliminar.';
   }
-
-  // Resto de la lógica existente para otras consultas
-  // Filter pending tasks
-  const pendingTasks = tasks.filter(task => !task.completed);
   
-  // Tareas para hoy
-  if (lowerQuery.includes('hoy') || lowerQuery.includes('para hoy')) {
+  // Respuestas genéricas para otras consultas
+  else if (input.includes('hola') || input.includes('saludos')) {
+    return '¡Hola! Soy tu asistente de tareas. Puedo ayudarte a crear o eliminar tareas, o responder preguntas sobre tus tareas existentes.';
+  } 
+  else if (input.includes('gracias')) {
+    return '¡De nada! Estoy aquí para ayudarte con tus tareas escolares. Si necesitas algo más, solo dímelo.';
+  }
+  else if (input.includes('qué puedes hacer') || input.includes('que puedes hacer')) {
+    return 'Puedo ayudarte a gestionar tus tareas escolares. Puedo crear nuevas tareas, eliminar tareas existentes y responder a preguntas sobre tus tareas. Prueba diciendo "crear tarea de matemáticas para mañana" o "eliminar tarea de historia".';
+  }
+  else if (input.includes('tareas para hoy') || input.includes('tareas de hoy')) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
     
-    const todayTasks = pendingTasks.filter(task => {
-      const dueDate = new Date(task.due_date);
-      dueDate.setHours(0, 0, 0, 0);
-      return dueDate.getTime() === today.getTime();
+    const todayTasks = tasks.filter(task => {
+      const taskDate = new Date(task.due_date);
+      return taskDate >= today && taskDate <= todayEnd && !task.completed;
     });
     
     if (todayTasks.length === 0) {
-      return "No tienes tareas para entregar hoy. ¡Buen trabajo!";
+      return '¡Buena noticia! No tienes tareas para entregar hoy.';
     }
     
-    let response = `Tienes ${todayTasks.length} tarea(s) para hoy:\n\n`;
-    todayTasks.forEach(task => {
-      response += `- ${task.subject}: ${task.title}\n`;
-    });
-    
-    return response;
+    return `Tienes ${todayTasks.length} tarea(s) para hoy: ${todayTasks.map(t => t.title).join(', ')}.`;
   }
+  else {
+    return 'No estoy seguro de cómo ayudarte con eso. Puedo crear o eliminar tareas, o darte información sobre tus tareas existentes. Prueba diciendo "crear tarea" o "qué tareas tengo para hoy".';
+  }
+}
+
+// Función para procesar los comandos detectados en la respuesta de la IA
+function processAICommandsFromMessage(
+  aiMessage: string,
+  userInput: string,
+  tasks: Task[],
+  onAddTask?: (task: Task) => void,
+  onDeleteTask?: (taskId: string) => void
+) {
+  const message = aiMessage.toLowerCase();
   
-  // Tareas pendientes
-  if (lowerQuery.includes('pendiente') || lowerQuery.includes('por hacer')) {
-    if (pendingTasks.length === 0) {
-      return "No tienes tareas pendientes. ¡Estás al día!";
+  // Detectar creación de tarea en la respuesta de la IA
+  if ((message.includes('he creado') || message.includes('he agregado') || message.includes('nueva tarea')) && 
+      userInput.toLowerCase().includes('tarea') && onAddTask) {
+    
+    // La IA ya ha indicado que creó una tarea, intentamos extraer detalles
+    let subject = 'General';
+    let title = 'Tarea';
+    let dueDate = new Date();
+    let priority = 'medium';
+    
+    // Extraer materia (después de "de" o "para")
+    const subjectMatches = userInput.match(/(?:de|para) ([^\s,\.]+)/i);
+    if (subjectMatches && subjectMatches[1]) {
+      subject = subjectMatches[1].trim();
+      subject = subject.charAt(0).toUpperCase() + subject.slice(1);
     }
     
-    let response = `Tienes ${pendingTasks.length} tarea(s) pendiente(s):\n\n`;
-    pendingTasks.forEach(task => {
-      response += `- ${task.subject}: ${task.title} (Entrega: ${formatDate(task.due_date)})\n`;
-    });
+    // Extraer título (después de "sobre" o antes de "para")
+    const titleMatches = userInput.match(/(?:sobre|de) ([^,\.]+?)(?:para|$)/i);
+    if (titleMatches && titleMatches[1]) {
+      title = titleMatches[1].trim();
+    }
     
-    return response;
+    // Crear la tarea si parece que la IA ha decidido crearla
+    const newTask: Task = {
+      id: generateId(),
+      subject,
+      title: title.charAt(0).toUpperCase() + title.slice(1),
+      description: "Tarea creada por asistente AI",
+      due_date: dueDate.toISOString(),
+      created_at: new Date().toISOString(),
+      completed: false,
+      attachments: [],
+      priority: priority as 'low' | 'medium' | 'high',
+      academic_context_id: null,
+      assignment_type: 'homework',
+      updated_at: new Date().toISOString()
+    };
+    
+    onAddTask(newTask);
   }
   
-  // Buscar tarea específica
-  if (lowerQuery.includes('matemáticas') || lowerQuery.includes('matematicas')) {
-    const mathTasks = pendingTasks.filter(
-      task => task.subject.toLowerCase().includes('matem')
+  // Detectar eliminación de tarea en la respuesta de la IA
+  if ((message.includes('he eliminado') || message.includes('he borrado') || message.includes('tarea eliminada')) &&
+      userInput.toLowerCase().includes('eliminar') && onDeleteTask) {
+    
+    // Buscar tarea por título en el mensaje del usuario
+    const taskToDelete = tasks.find(task => 
+      userInput.toLowerCase().includes(task.title.toLowerCase()) ||
+      userInput.toLowerCase().includes(task.subject.toLowerCase())
     );
     
-    if (mathTasks.length === 0) {
-      return "No encuentro tareas pendientes de matemáticas.";
+    if (taskToDelete) {
+      onDeleteTask(taskToDelete.id);
     }
-    
-    let response = `Encontré ${mathTasks.length} tarea(s) de matemáticas:\n\n`;
-    mathTasks.forEach(task => {
-      response += `- ${task.title} (Entrega: ${formatDate(task.due_date)})\n`;
-      if (task.description) {
-        response += `  Descripción: ${task.description}\n`;
-      }
-    });
-    
-    return response;
   }
-  
-  // Buscar por fecha
-  if (lowerQuery.includes('semana') || lowerQuery.includes('próxima semana')) {
-    const today = new Date();
-    const nextWeek = new Date(today);
-    nextWeek.setDate(today.getDate() + 7);
-    
-    const weekTasks = pendingTasks.filter(task => {
-      const dueDate = new Date(task.due_date);
-      return dueDate > today && dueDate <= nextWeek;
-    });
-    
-    if (weekTasks.length === 0) {
-      return "No tienes tareas para la próxima semana.";
-    }
-    
-    let response = `Tienes ${weekTasks.length} tarea(s) para la próxima semana:\n\n`;
-    weekTasks.forEach(task => {
-      response += `- ${task.subject}: ${task.title} (Entrega: ${formatDate(task.due_date)})\n`;
-    });
-    
-    return response;
-  }
-  
-  // Respuestas generales
-  if (lowerQuery.includes('ayuda') || lowerQuery.includes('cómo')) {
-    return "Puedo ayudarte a organizar tus tareas. Pregúntame cosas como:\n\n" +
-      "- ¿Qué tareas tengo para hoy?\n" +
-      "- ¿Cuántas tareas tengo pendientes?\n" +
-      "- ¿Tengo tareas de matemáticas?\n" +
-      "- ¿Qué debo entregar la próxima semana?\n" +
-      "\nTambién puedes pedirme que cree o elimine tareas:\n" +
-      "- Crear una tarea de matemáticas para el viernes\n" +
-      "- Agregar tarea 'Estudiar para el examen' en Física\n" +
-      "- Eliminar la tarea de historia";
-  }
-  
-  // Saludo
-  if (lowerQuery.includes('hola') || lowerQuery.includes('qué tal')) {
-    return "¡Hola! Estoy aquí para ayudarte con tus tareas. ¿En qué puedo ayudarte hoy? Puedo crear nuevas tareas o ayudarte a gestionar las existentes.";
-  }
-  
-  // Respuesta por defecto
-  return "No estoy seguro de cómo responder a eso. Puedes preguntarme sobre tus tareas o pedirme que cree una nueva tarea diciendo algo como 'crea una tarea de matemáticas para mañana'.";
-};
+}

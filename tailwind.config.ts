@@ -62,6 +62,8 @@ const config = {
           "dark-secondary": "#7E69AB",
           "dark-tertiary": "#6E59A5",
           "dark-accent": "#D6BCFA",
+          "gradient-start": "#8B5CF6",
+          "gradient-end": "#6366F1",
         },
       },
       borderRadius: {
@@ -81,10 +83,19 @@ const config = {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        pulse: {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.5' },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "pulse": "pulse 1.5s ease-in-out infinite",
+      },
+      backgroundImage: {
+        'gradient-app': 'linear-gradient(90deg, #8B5CF6 0%, #6366F1 100%)',
+        'gradient-app-dark': 'linear-gradient(90deg, #9b87f5 0%, #7E69AB 100%)',
       },
     },
   },

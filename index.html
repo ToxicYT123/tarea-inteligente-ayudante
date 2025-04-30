@@ -27,6 +27,12 @@
     
     <!-- Tema -->
     <meta name="theme-color" content="#9b87f5" />
+    
+    <!-- Environment Variables -->
+    <script>
+      // Establecer la variable de entorno para la clave de API (si existe en localStorage)
+      window.VITE_OPENAI_API_KEY = localStorage.getItem('openai_api_key') || '';
+    </script>
   </head>
 
   <body>

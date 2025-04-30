@@ -3,10 +3,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Task, ChatMessage } from '@/types';
 import { generateId } from '@/utils/taskUtils';
 import { generateAIResponse } from '@/utils/aiUtils';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, Loader2 } from 'lucide-react';
 import ChatContainer from './chat/ChatContainer';
 import { toast } from "@/components/ui/sonner";
 import { useTheme } from "@/hooks/use-theme";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 interface AIChatProps {
   tasks: Task[];
@@ -25,6 +28,8 @@ const AIChat: React.FC<AIChatProps> = ({ tasks, onAddTask, onDeleteTask }) => {
   ]);
   
   const [isTyping, setIsTyping] = useState(false);
+  const [apiKey, setApiKey] = useState<string>(localStorage.getItem('openai_api_key') || '');
+  const [showApiKeyInput, setShowApiKeyInput] = useState<boolean>(!localStorage.getItem('openai_api_key'));
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { theme } = useTheme();
 
@@ -35,8 +40,29 @@ const AIChat: React.FC<AIChatProps> = ({ tasks, onAddTask, onDeleteTask }) => {
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+  
+  const handleSaveApiKey = () => {
+    if (apiKey.trim()) {
+      localStorage.setItem('openai_api_key', apiKey.trim());
+      setShowApiKeyInput(false);
+      toast.success('API Key guardada');
+      
+      // Set the env variable at runtime
+      (window as any).VITE_OPENAI_API_KEY = apiKey.trim();
+      
+      // Reload the messages with a welcome message
+      setMessages([
+        {
+          id: generateId(),
+          content: "¡Gracias! Ahora puedo ayudarte con tus tareas usando IA avanzada. Prueba preguntándome algo o pidiéndome que cree una tarea.",
+          sender: 'assistant',
+          timestamp: new Date().toISOString()
+        }
+      ]);
+    }
+  };
 
-  const handleNewMessage = (input: string) => {
+  const handleNewMessage = async (input: string) => {
     // Agregar mensaje del usuario
     const userMessage: ChatMessage = {
       id: generateId(),
@@ -48,10 +74,10 @@ const AIChat: React.FC<AIChatProps> = ({ tasks, onAddTask, onDeleteTask }) => {
     setMessages(prev => [...prev, userMessage]);
     setIsTyping(true);
     
-    // Generar respuesta de IA con capacidad para crear/eliminar tareas
-    setTimeout(() => {
-      const response = generateAIResponse(
-        input.trim().toLowerCase(), 
+    try {
+      // Generar respuesta de IA
+      const response = await generateAIResponse(
+        input.trim(), 
         tasks,
         (newTask) => {
           if (onAddTask) {
@@ -75,8 +101,20 @@ const AIChat: React.FC<AIChatProps> = ({ tasks, onAddTask, onDeleteTask }) => {
       };
       
       setMessages(prev => [...prev, aiMessage]);
+    } catch (error) {
+      console.error('Error al procesar el mensaje:', error);
+      
+      const errorMessage: ChatMessage = {
+        id: generateId(),
+        content: "Lo siento, ha ocurrido un error al procesar tu mensaje. Por favor, inténtalo de nuevo.",
+        sender: 'assistant',
+        timestamp: new Date().toISOString()
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
       setIsTyping(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -87,19 +125,64 @@ const AIChat: React.FC<AIChatProps> = ({ tasks, onAddTask, onDeleteTask }) => {
     }`}>
       <div className={`p-4 border-b flex items-center space-x-2 ${
         theme === 'dark'
-          ? 'border-gray-700 bg-gradient-app-dark'
-          : 'bg-tareaassist-primary'
-      } text-white`}>
+          ? 'border-gray-700 bg-tareaassist-dark-primary text-white'
+          : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white'
+      }`}>
         <MessageSquare className="h-5 w-5" />
         <h2 className="font-medium">Asistente TareaAssist</h2>
       </div>
       
-      <ChatContainer 
-        messages={messages}
-        isTyping={isTyping}
-        onNewMessage={handleNewMessage}
-        messagesEndRef={messagesEndRef}
-      />
+      {showApiKeyInput ? (
+        <div className="flex-1 p-4 flex flex-col justify-center items-center">
+          <div className={`max-w-md w-full p-4 rounded-lg border ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
+            <h3 className="text-lg font-medium mb-2">Configuración de IA</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Para utilizar la inteligencia artificial avanzada, necesitas proporcionar una API Key de OpenAI.
+            </p>
+            
+            <div className="space-y-4">
+              <Alert variant="default" className={theme === 'dark' ? 'bg-gray-700 border-gray-600' : ''}>
+                <AlertDescription>
+                  Tu API Key se guardará localmente en este navegador y no se compartirá con terceros.
+                </AlertDescription>
+              </Alert>
+              
+              <Input
+                type="password"
+                placeholder="Ingresa tu API Key de OpenAI"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                className={theme === 'dark' ? 'bg-gray-700 border-gray-600' : ''}
+              />
+              
+              <Button 
+                onClick={handleSaveApiKey} 
+                className="w-full"
+                disabled={!apiKey.trim()}
+              >
+                Guardar y Continuar
+              </Button>
+              
+              <p className="text-xs text-center text-muted-foreground mt-2">
+                Si no tienes una API Key, puedes seguir usando el asistente básico sin conectar a OpenAI.{' '}
+                <button 
+                  onClick={() => setShowApiKeyInput(false)}
+                  className="text-primary hover:underline"
+                >
+                  Continuar sin API Key
+                </button>
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <ChatContainer 
+          messages={messages}
+          isTyping={isTyping}
+          onNewMessage={handleNewMessage}
+          messagesEndRef={messagesEndRef}
+        />
+      )}
     </div>
   );
 };
