@@ -2,7 +2,52 @@ import { Task } from '@/types';
 import { generateId } from './taskUtils';
 import { generateEnhancedSystemPrompt, enhanceAIInput } from './aiContext';
 
-const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
+// Variable para almacenar la API key
+let OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY || '';
+
+// Función para establecer la API key
+export function setOpenAIApiKey(apiKey: string): void {
+  OPENAI_API_KEY = apiKey;
+  localStorage.setItem('openai_api_key', apiKey);
+}
+
+// Función para obtener la API key almacenada
+export function getOpenAIApiKey(): string {
+  return localStorage.getItem('openai_api_key') || OPENAI_API_KEY || '';
+}
+
+// Función para guardar la API key en el historial
+export function saveApiKeyToHistory(apiKey: string): void {
+  if (!apiKey) return;
+  
+  const history = getApiKeyHistory();
+  
+  // Evitar duplicados
+  if (!history.includes(apiKey)) {
+    history.unshift(apiKey); // Añadir al principio
+    
+    // Limitar a 5 claves en el historial
+    const limitedHistory = history.slice(0, 5);
+    
+    try {
+      // Podríamos implementar algún tipo de cifrado básico aquí
+      localStorage.setItem('openai_api_key_history', JSON.stringify(limitedHistory));
+    } catch (e) {
+      console.error('Error al guardar el historial de API keys:', e);
+    }
+  }
+}
+
+// Función para obtener el historial de API keys
+export function getApiKeyHistory(): string[] {
+  try {
+    const history = localStorage.getItem('openai_api_key_history');
+    return history ? JSON.parse(history) : [];
+  } catch (e) {
+    console.error('Error al obtener el historial de API keys:', e);
+    return [];
+  }
+}
 
 export async function validateApiKey(apiKey: string): Promise<boolean> {
   try {
@@ -28,23 +73,26 @@ export async function generateAIResponse(
   onDeleteTask?: (taskId: string) => void
 ): Promise<string> {
   try {
-    // Get API key from localStorage (most up to date)
-    const apiKey = localStorage.getItem('openai_api_key') || OPENAI_API_KEY;
+    // Obtener API key guardada (la más actualizada)
+    const apiKey = getOpenAIApiKey();
     
     if (!apiKey) {
-      console.error("OpenAI API key not found. Using fallback response.");
+      console.error("OpenAI API key no encontrada. Usando respuesta de respaldo.");
       return generateFallbackResponse(userInput, tasks, onAddTask, onDeleteTask);
     }
 
-    // Get the enhanced system prompt
+    // Obtener el prompt del sistema mejorado
     const systemPrompt = generateEnhancedSystemPrompt();
     
-    // Get the enhanced user input with context
+    // Obtener la entrada de usuario mejorada con contexto
     const enhancedInput = enhanceAIInput(
       userInput,
       tasks,
       document.documentElement.classList.contains('dark') ? 'oscuro' : 'claro'
     );
+
+    // Mostrar al usuario que estamos procesando su consulta
+    console.log("Enviando consulta a OpenAI...");
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -53,24 +101,28 @@ export async function generateAIResponse(
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o-mini', // Usar gpt-4o-mini para mejores resultados a menor costo
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: enhancedInput }
         ],
-        max_tokens: 250,
+        max_tokens: 500, // Aumentamos los tokens para respuestas más completas
         temperature: 0.7
       })
     });
 
     if (!response.ok) {
-      throw new Error(`Error en la API de OpenAI: ${response.status}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`Error en la API de OpenAI (${response.status}): ${JSON.stringify(errorData)}`);
     }
 
     const data = await response.json();
     const aiMessage = data.choices[0].message.content;
     
-    // Procesar la respuesta para detectar comandos de creación/eliminación de tareas
+    // Guardar que la clave API funciona correctamente
+    saveApiKeyToHistory(apiKey);
+    
+    // Procesar la respuesta para detectar comandos
     processAICommandsFromMessage(aiMessage, userInput, tasks, onAddTask, onDeleteTask);
     
     return aiMessage;
@@ -192,14 +244,20 @@ function generateFallbackResponse(
     return 'No encontré una tarea específica para eliminar. Por favor, menciona el título o la materia de la tarea que quieres eliminar.';
   }
   
-  // Respuestas genéricas para otras consultas
+  // Respuestas para verificar si la API key no está configurada
   else if (input.includes('hola') || input.includes('saludos')) {
+    if (!getOpenAIApiKey()) {
+      return 'Hola. Para poder ayudarte mejor, necesito una API key de OpenAI válida. Por favor, configúrala en la sección de configuración para desbloquear todas mis capacidades como asistente.';
+    }
     return '¡Hola! Soy tu asistente de tareas. Puedo ayudarte a crear o eliminar tareas, o responder preguntas sobre tus tareas existentes.';
   } 
   else if (input.includes('gracias')) {
     return '¡De nada! Estoy aquí para ayudarte con tus tareas escolares. Si necesitas algo más, solo dímelo.';
   }
   else if (input.includes('qué puedes hacer') || input.includes('que puedes hacer')) {
+    if (!getOpenAIApiKey()) {
+      return 'Puedo ayudarte con la gestión de tus tareas escolares, pero actualmente estoy funcionando con capacidades limitadas. Para aprovechar todas mis funciones de IA, necesito una API key de OpenAI válida. Puedes configurarla en la sección de ajustes.';
+    }
     return 'Puedo ayudarte a gestionar tus tareas escolares. Puedo crear nuevas tareas, eliminar tareas existentes y responder a preguntas sobre tus tareas. Prueba diciendo "crear tarea de matemáticas para mañana" o "eliminar tarea de historia".';
   }
   else if (input.includes('tareas para hoy') || input.includes('tareas de hoy')) {
@@ -220,6 +278,9 @@ function generateFallbackResponse(
     return `Tienes ${todayTasks.length} tarea(s) para hoy: ${todayTasks.map(t => t.title).join(', ')}.`;
   }
   else {
+    if (!getOpenAIApiKey()) {
+      return 'Para poder responder a esta consulta de manera efectiva, necesito una API key de OpenAI válida. Por favor, configúrala en la sección de ajustes para desbloquear todas mis capacidades como asistente.';
+    }
     return 'No estoy seguro de cómo ayudarte con eso. Puedo crear o eliminar tareas, o darte información sobre tus tareas existentes. Prueba diciendo "crear tarea" o "qué tareas tengo para hoy".';
   }
 }

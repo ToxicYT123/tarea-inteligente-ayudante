@@ -27,9 +27,13 @@ const AccessCode: React.FC<AccessCodeProps> = ({ onAccess }) => {
   const [is2FAEnabled, setIs2FAEnabled] = useState(() => {
     return localStorage.getItem("2fa_enabled") === "true";
   });
+  const [is2FAVerified, setIs2FAVerified] = useState(() => {
+    return localStorage.getItem("2fa_verified") === "true";
+  });
   const [authMethod, setAuthMethod] = useState<'code' | '2fa'>(
-    is2FAEnabled ? '2fa' : 'code'
+    is2FAEnabled && is2FAVerified ? '2fa' : 'code'
   );
+  const [otpValue, setOtpValue] = useState("");
   
   useEffect(() => {
     // Verificar si hay un bloqueo en localStorage
@@ -86,8 +90,8 @@ const AccessCode: React.FC<AccessCodeProps> = ({ onAccess }) => {
       toast.success("Código correcto. Acceso concedido.");
       localStorage.removeItem("accessAttempts");
       
-      if (!is2FAEnabled) {
-        // If 2FA is not set up yet, show setup screen
+      if (!is2FAEnabled || !is2FAVerified) {
+        // Si 2FA no está configurado todavía, mostrar la pantalla de configuración
         setShowTwoFactorSetup(true);
       } else {
         onAccess();
@@ -111,9 +115,25 @@ const AccessCode: React.FC<AccessCodeProps> = ({ onAccess }) => {
     setCode("");
   };
 
+  const handle2FASubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // En una implementación real, esto validaría el OTP contra la clave secreta
+    // Para esta demo, aceptamos cualquier código de 6 dígitos
+    if (otpValue.length === 6) {
+      toast.success("Código de verificación válido. Acceso concedido.");
+      onAccess();
+    } else {
+      toast.error("Código inválido. Debe tener 6 dígitos.");
+    }
+    
+    setOtpValue("");
+  };
+
   const handleTwoFactorVerified = () => {
     setShowTwoFactorSetup(false);
     setIs2FAEnabled(true);
+    setIs2FAVerified(true);
     onAccess();
   };
   
@@ -131,6 +151,7 @@ const AccessCode: React.FC<AccessCodeProps> = ({ onAccess }) => {
       <TwoFactorAuth 
         onVerify={handleTwoFactorVerified} 
         onCancel={() => {
+          // Si el usuario cancela la configuración de 2FA, aún así le permitimos acceder
           setShowTwoFactorSetup(false);
           onAccess();
         }} 
@@ -164,11 +185,11 @@ const AccessCode: React.FC<AccessCodeProps> = ({ onAccess }) => {
             className="w-full"
           >
             <TabsList className="grid w-full grid-cols-2 mb-4">
-              <TabsTrigger value="code" className="flex items-center gap-2" disabled={!is2FAEnabled}>
+              <TabsTrigger value="code" className="flex items-center gap-2">
                 <KeyRound className="h-4 w-4" />
                 <span>Código de Acceso</span>
               </TabsTrigger>
-              <TabsTrigger value="2fa" className="flex items-center gap-2" disabled={!is2FAEnabled}>
+              <TabsTrigger value="2fa" className="flex items-center gap-2" disabled={!is2FAEnabled || !is2FAVerified}>
                 <ShieldCheck className="h-4 w-4" />
                 <span>Autenticador</span>
               </TabsTrigger>
@@ -196,7 +217,7 @@ const AccessCode: React.FC<AccessCodeProps> = ({ onAccess }) => {
                 </Button>
               </form>
               
-              {is2FAEnabled && (
+              {is2FAEnabled && is2FAVerified && (
                 <p className="text-xs text-muted-foreground text-center">
                   Si prefieres, puedes usar la aplicación Google Authenticator
                 </p>
@@ -204,18 +225,43 @@ const AccessCode: React.FC<AccessCodeProps> = ({ onAccess }) => {
             </TabsContent>
             
             <TabsContent value="2fa" className="space-y-4">
-              <div className="text-center p-4 space-y-4">
-                <QrCode className="mx-auto h-16 w-16 text-primary" />
-                <p className="text-sm">
-                  Abre la aplicación Google Authenticator y escanea el código QR para obtener el código de verificación.
-                </p>
-                <Button 
-                  onClick={() => setShowTwoFactorSetup(true)} 
-                  className="w-full"
-                >
-                  Configurar Autenticador
-                </Button>
-              </div>
+              {is2FAEnabled && is2FAVerified ? (
+                <form onSubmit={handle2FASubmit} className="space-y-4">
+                  <div className="text-center space-y-4">
+                    <p className="text-sm">
+                      Abre la aplicación Google Authenticator y introduce el código de verificación.
+                    </p>
+                    <InputOTP 
+                      maxLength={6} 
+                      value={otpValue} 
+                      onChange={setOtpValue}
+                      className="w-full flex justify-center"
+                    >
+                      <InputOTPGroup>
+                        {Array.from({ length: 6 }).map((_, index) => (
+                          <InputOTPSlot key={index} index={index} />
+                        ))}
+                      </InputOTPGroup>
+                    </InputOTP>
+                    <Button type="submit" className="w-full" disabled={otpValue.length !== 6}>
+                      Verificar
+                    </Button>
+                  </div>
+                </form>
+              ) : (
+                <div className="text-center p-4 space-y-4">
+                  <QrCode className="mx-auto h-16 w-16 text-primary" />
+                  <p className="text-sm">
+                    Para utilizar la autenticación de dos factores, primero debes configurarla con Google Authenticator.
+                  </p>
+                  <Button 
+                    onClick={() => setShowTwoFactorSetup(true)} 
+                    className="w-full"
+                  >
+                    Configurar Autenticador
+                  </Button>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         )}

@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/hooks/use-theme";
-import { X, ArrowRight, Book } from 'lucide-react';
+import { ArrowRight, Book } from 'lucide-react';
 
 const steps = [
   {
@@ -83,11 +83,8 @@ const TutorialGuide = () => {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className={`sm:max-w-[500px] ${theme === 'dark' ? 'bg-gray-800 text-white' : ''}`}>
           <DialogHeader>
-            <DialogTitle className="flex justify-between items-center">
+            <DialogTitle className="text-lg">
               {steps[currentStep].title}
-              <Button variant="ghost" size="icon" onClick={handleClose} className="h-8 w-8 p-0">
-                <X className="h-4 w-4" />
-              </Button>
             </DialogTitle>
             <DialogDescription>
               {steps[currentStep].description}

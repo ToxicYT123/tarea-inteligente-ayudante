@@ -36,7 +36,10 @@ const InputOTPSlot = React.forwardRef<
   const inputOTPContext = React.useContext(OTPInputContext)
   // Comprobación de seguridad para evitar acceder a propiedades de undefined
   const slot = inputOTPContext?.slots?.[index] || {}
-  const { char, hasFakeCaret, isActive } = slot
+  // Definimos valores predeterminados para evitar errores de TypeScript
+  const char = slot.char || '';
+  const hasFakeCaret = slot.hasFakeCaret || false;
+  const isActive = slot.isActive || false;
 
   return (
     <div

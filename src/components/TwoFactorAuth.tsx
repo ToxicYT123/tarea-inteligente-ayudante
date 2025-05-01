@@ -14,47 +14,52 @@ interface TwoFactorAuthProps {
 
 const TwoFactorAuth: React.FC<TwoFactorAuthProps> = ({ onVerify, onCancel }) => {
   const [otpValue, setOtpValue] = useState("");
-  const [secretKey, setSecretKey] = useState("");
+  // Usar localStorage para almacenar y recuperar la clave secreta de forma persistente
+  const [secretKey, setSecretKey] = useState(() => {
+    const storedKey = localStorage.getItem("2fa_secret_key");
+    if (storedKey) return storedKey;
+    
+    // Si no hay una clave almacenada, generamos una nueva
+    const randomSecret = Array(16)
+      .fill(0)
+      .map(() => Math.floor(Math.random() * 16).toString(16))
+      .join('');
+      
+    localStorage.setItem("2fa_secret_key", randomSecret);
+    return randomSecret;
+  });
   const [qrCodeUrl, setQrCodeUrl] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
-  // Generate secret key for 2FA
+  // Generar código QR basado en la clave secreta persistente
   useEffect(() => {
-    const generateSecret = async () => {
+    const generateQRCode = async () => {
       try {
         setIsLoading(true);
-        // In a real app, this should be generated on the server
-        // For this demo, we'll generate a random string
-        const randomSecret = Array(16)
-          .fill(0)
-          .map(() => Math.floor(Math.random() * 16).toString(16))
-          .join('');
-        
-        setSecretKey(randomSecret);
-        
-        // Generate QR code
-        const otpAuthUrl = `otpauth://totp/HABYTareaAssist:user@example.com?secret=${randomSecret}&issuer=HABYTareaAssist`;
+        // Usar la clave secreta existente para generar el código QR
+        const otpAuthUrl = `otpauth://totp/HABYTareaAssist:usuario@example.com?secret=${secretKey}&issuer=HABYTareaAssist`;
         const qrCode = await QRCode.toDataURL(otpAuthUrl);
         setQrCodeUrl(qrCode);
       } catch (error) {
-        console.error("Error generating QR code:", error);
+        console.error("Error generando código QR:", error);
         toast.error("Error al generar el código QR");
       } finally {
         setIsLoading(false);
       }
     };
 
-    generateSecret();
-  }, []);
+    generateQRCode();
+  }, [secretKey]);
 
   const handleVerify = () => {
-    // In a real application, this should validate the OTP against the secret
-    // For this demo, we'll accept any 6-digit code
+    // En una implementación real, esto validaría el OTP contra la clave secreta
+    // Para esta demo, aceptamos cualquier código de 6 dígitos
     if (otpValue.length === 6) {
       toast.success("Código verificado correctamente");
-      onVerify();
-      // Store in localStorage that 2FA is set up
+      // Guardar en localStorage que 2FA está configurado
       localStorage.setItem("2fa_enabled", "true");
+      localStorage.setItem("2fa_verified", "true");
+      onVerify();
     } else {
       toast.error("Código inválido. Debe tener 6 dígitos.");
     }
@@ -97,7 +102,7 @@ const TwoFactorAuth: React.FC<TwoFactorAuthProps> = ({ onVerify, onCancel }) => 
               
               <div className="space-y-2">
                 <label className="text-sm font-medium">
-                  Ingresa el código de verificación:
+                  Ingresa el código de verificación de Google Authenticator:
                 </label>
                 <InputOTP 
                   maxLength={6} 
