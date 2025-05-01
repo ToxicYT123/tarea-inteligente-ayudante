@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { toast } from "@/components/ui/sonner";
-import { Loader2, KeyRound, QrCode } from 'lucide-react';
+import { Loader2, KeyRound } from 'lucide-react';
 import QRCode from 'qrcode';
 
 interface TwoFactorAuthProps {
@@ -104,14 +104,13 @@ const TwoFactorAuth: React.FC<TwoFactorAuthProps> = ({ onVerify, onCancel }) => 
                   value={otpValue} 
                   onChange={setOtpValue}
                   className="w-full flex justify-center"
-                  render={({ slots }) => (
-                    <InputOTPGroup>
-                      {slots.map((slot, index) => (
-                        <InputOTPSlot key={index} {...slot} index={index} />
-                      ))}
-                    </InputOTPGroup>
-                  )}
-                />
+                >
+                  <InputOTPGroup>
+                    {Array.from({ length: 6 }).map((_, index) => (
+                      <InputOTPSlot key={index} index={index} />
+                    ))}
+                  </InputOTPGroup>
+                </InputOTP>
               </div>
             </>
           )}

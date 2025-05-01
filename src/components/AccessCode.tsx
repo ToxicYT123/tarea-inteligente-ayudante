@@ -209,13 +209,12 @@ const AccessCode: React.FC<AccessCodeProps> = ({ onAccess }) => {
                 <p className="text-sm">
                   Abre la aplicación Google Authenticator y escanea el código QR para obtener el código de verificación.
                 </p>
-                
-                <div className="space-y-4">
-                  <TwoFactorAuth
-                    onVerify={handleTwoFactorVerified}
-                    onCancel={() => setAuthMethod('code')}
-                  />
-                </div>
+                <Button 
+                  onClick={() => setShowTwoFactorSetup(true)} 
+                  className="w-full"
+                >
+                  Configurar Autenticador
+                </Button>
               </div>
             </TabsContent>
           </Tabs>
