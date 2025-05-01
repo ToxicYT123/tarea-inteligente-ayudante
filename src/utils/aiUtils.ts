@@ -1,6 +1,6 @@
-
 import { Task } from '@/types';
 import { generateId } from './taskUtils';
+import { generateEnhancedSystemPrompt, enhanceAIInput } from './aiContext';
 
 const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
 
@@ -28,41 +28,35 @@ export async function generateAIResponse(
   onDeleteTask?: (taskId: string) => void
 ): Promise<string> {
   try {
-    if (!OPENAI_API_KEY) {
+    // Get API key from localStorage (most up to date)
+    const apiKey = localStorage.getItem('openai_api_key') || OPENAI_API_KEY;
+    
+    if (!apiKey) {
       console.error("OpenAI API key not found. Using fallback response.");
       return generateFallbackResponse(userInput, tasks, onAddTask, onDeleteTask);
     }
 
-    // Crear el sistema y el contexto para el mensaje
-    const systemPrompt = `
-      Eres un asistente de tareas escolares llamado HABY TareaAssist. Ayudas a estudiantes a gestionar sus tareas académicas.
-      Puedes crear nuevas tareas y eliminar tareas existentes cuando el usuario te lo pida.
-      
-      Si el usuario pide crear una tarea, extrae los detalles (materia, título, fecha de entrega, prioridad) y responde confirmando.
-      Si el usuario pide eliminar una tarea, busca por título o materia entre las tareas existentes.
-      
-      Tu tono debe ser amigable, profesional y útil. Limita tus respuestas a 3-4 oraciones máximo.
-      
-      El proyecto HABY TareaAssist es una aplicación educativa creada para estudiantes, diseñada para ayudar 
-      a organizar tareas escolares, gestionar entregas y mejorar la productividad académica.
-    `;
-
-    // Obtener contexto de las tareas actuales
-    const taskContext = tasks.map(task => 
-      `Tarea: ${task.title} (ID: ${task.id}, Materia: ${task.subject}, Fecha: ${new Date(task.due_date).toLocaleDateString()}, Completada: ${task.completed ? 'Sí' : 'No'})`
-    ).join('\n');
+    // Get the enhanced system prompt
+    const systemPrompt = generateEnhancedSystemPrompt();
+    
+    // Get the enhanced user input with context
+    const enhancedInput = enhanceAIInput(
+      userInput,
+      tasks,
+      document.documentElement.classList.contains('dark') ? 'oscuro' : 'claro'
+    );
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`
+        'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Contexto de tareas actuales:\n${taskContext}\n\nConsulta del usuario: ${userInput}` }
+          { role: 'user', content: enhancedInput }
         ],
         max_tokens: 250,
         temperature: 0.7

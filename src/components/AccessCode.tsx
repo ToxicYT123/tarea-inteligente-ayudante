@@ -3,6 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import TwoFactorAuth from './TwoFactorAuth';
+import { QrCode, KeyRound, ShieldCheck } from 'lucide-react';
 
 const CORRECT_CODE = "B4$w7K&1zP!X";
 const MAX_ATTEMPTS = 5;
@@ -20,6 +23,13 @@ const AccessCode: React.FC<AccessCodeProps> = ({ onAccess }) => {
   });
   const [blocked, setBlocked] = useState(false);
   const [blockTimeLeft, setBlockTimeLeft] = useState<number | null>(null);
+  const [showTwoFactorSetup, setShowTwoFactorSetup] = useState(false);
+  const [is2FAEnabled, setIs2FAEnabled] = useState(() => {
+    return localStorage.getItem("2fa_enabled") === "true";
+  });
+  const [authMethod, setAuthMethod] = useState<'code' | '2fa'>(
+    is2FAEnabled ? '2fa' : 'code'
+  );
   
   useEffect(() => {
     // Verificar si hay un bloqueo en localStorage
@@ -75,7 +85,13 @@ const AccessCode: React.FC<AccessCodeProps> = ({ onAccess }) => {
     if (code === CORRECT_CODE) {
       toast.success("Código correcto. Acceso concedido.");
       localStorage.removeItem("accessAttempts");
-      onAccess();
+      
+      if (!is2FAEnabled) {
+        // If 2FA is not set up yet, show setup screen
+        setShowTwoFactorSetup(true);
+      } else {
+        onAccess();
+      }
     } else {
       const newAttempts = attempts + 1;
       setAttempts(newAttempts);
@@ -94,6 +110,12 @@ const AccessCode: React.FC<AccessCodeProps> = ({ onAccess }) => {
     
     setCode("");
   };
+
+  const handleTwoFactorVerified = () => {
+    setShowTwoFactorSetup(false);
+    setIs2FAEnabled(true);
+    onAccess();
+  };
   
   // Función para formatear el tiempo restante
   const formatTimeLeft = (ms: number): string => {
@@ -103,14 +125,26 @@ const AccessCode: React.FC<AccessCodeProps> = ({ onAccess }) => {
     
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
+
+  if (showTwoFactorSetup) {
+    return (
+      <TwoFactorAuth 
+        onVerify={handleTwoFactorVerified} 
+        onCancel={() => {
+          setShowTwoFactorSetup(false);
+          onAccess();
+        }} 
+      />
+    );
+  }
   
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-background/95 backdrop-blur-sm z-50">
-      <div className="w-full max-w-md p-8 space-y-4 bg-card rounded-lg shadow-lg border">
+      <div className="w-full max-w-md p-8 space-y-6 bg-card rounded-lg shadow-lg border">
         <div className="text-center">
           <h2 className="text-2xl font-bold">HABY TareaAssist</h2>
           <p className="text-muted-foreground">
-            Por favor, ingresa el código de acceso para continuar.
+            Por favor, autentícate para continuar.
           </p>
         </div>
         
@@ -124,26 +158,67 @@ const AccessCode: React.FC<AccessCodeProps> = ({ onAccess }) => {
             )}
           </div>
         ) : (
-          <form onSubmit={handleCodeSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Input
-                type="password"
-                placeholder="Ingresa el código de acceso"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                autoFocus
-                className="text-center"
-                required
-              />
-              <p className="text-xs text-muted-foreground text-center">
-                Intento {attempts} de {MAX_ATTEMPTS}
-              </p>
-            </div>
+          <Tabs 
+            value={authMethod} 
+            onValueChange={(val: string) => setAuthMethod(val as 'code' | '2fa')}
+            className="w-full"
+          >
+            <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsTrigger value="code" className="flex items-center gap-2" disabled={!is2FAEnabled}>
+                <KeyRound className="h-4 w-4" />
+                <span>Código de Acceso</span>
+              </TabsTrigger>
+              <TabsTrigger value="2fa" className="flex items-center gap-2" disabled={!is2FAEnabled}>
+                <ShieldCheck className="h-4 w-4" />
+                <span>Autenticador</span>
+              </TabsTrigger>
+            </TabsList>
             
-            <Button type="submit" className="w-full">
-              Acceder
-            </Button>
-          </form>
+            <TabsContent value="code" className="space-y-4">
+              <form onSubmit={handleCodeSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Input
+                    type="password"
+                    placeholder="Ingresa el código de acceso"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    autoFocus
+                    className="text-center"
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground text-center">
+                    Intento {attempts} de {MAX_ATTEMPTS}
+                  </p>
+                </div>
+                
+                <Button type="submit" className="w-full">
+                  Acceder
+                </Button>
+              </form>
+              
+              {is2FAEnabled && (
+                <p className="text-xs text-muted-foreground text-center">
+                  Si prefieres, puedes usar la aplicación Google Authenticator
+                </p>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="2fa" className="space-y-4">
+              <div className="text-center p-4 space-y-4">
+                <QrCode className="mx-auto h-16 w-16 text-primary" />
+                <p className="text-sm">
+                  Abre la aplicación Google Authenticator y escanea el código QR para obtener el código de verificación.
+                </p>
+                
+                <div className="space-y-4">
+                  <TwoFactorAuth
+                    onVerify={handleTwoFactorVerified}
+                    onCancel={() => setAuthMethod('code')}
+                  />
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
         )}
       </div>
     </div>
