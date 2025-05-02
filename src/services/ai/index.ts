@@ -1,7 +1,7 @@
 
 import { Task } from '@/types';
 import { enhanceAIInput, generateEnhancedSystemPrompt } from '@/utils/aiContext';
-import { AIProvider, AI_PROVIDERS } from './types';
+import { type AIProvider, AI_PROVIDERS } from './types';
 import { AIKeyManager } from './keyManager';
 import { validateApiKey } from './validation';
 import { generateOpenAIResponse } from './providers/openai';
@@ -68,7 +68,9 @@ export async function generateAIResponse(
 }
 
 // Export everything needed
-export { AIProvider, AI_PROVIDERS, AIKeyManager, validateApiKey };
+export { AIKeyManager, validateApiKey };
+export { AI_PROVIDERS };
+export type { AIProvider };
 
 export default {
   generateAIResponse,
