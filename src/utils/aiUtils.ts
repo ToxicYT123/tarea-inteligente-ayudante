@@ -1,6 +1,6 @@
 
 import { Task } from '@/types';
-import { AIKeyManager, generateAIResponse, validateApiKey } from '@/services/aiService';
+import { AIKeyManager, generateAIResponse, validateApiKey } from '@/services/ai';
 
 // Re-exporting the needed functions from our new aiService
 export { validateApiKey, generateAIResponse };

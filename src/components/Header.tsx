@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { toast } from "@/components/ui/sonner";
 import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AI_PROVIDERS, AIProvider, AIKeyManager, validateApiKey } from '@/services/aiService';
+import { AI_PROVIDERS, AIProvider, AIKeyManager, validateApiKey } from '@/services/ai';
 import AIProviderSelector from './ai/AIProviderSelector';
 
 const Header = () => {

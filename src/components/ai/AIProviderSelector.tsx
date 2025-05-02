@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Check, Loader2, Shield } from 'lucide-react';
 import { useTheme } from "@/hooks/use-theme";
-import { AIProvider, AI_PROVIDERS, AIKeyManager, validateApiKey } from '@/services/aiService';
+import { AIProvider, AI_PROVIDERS, AIKeyManager, validateApiKey } from '@/services/ai';
 import { toast } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";

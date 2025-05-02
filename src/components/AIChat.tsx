@@ -19,7 +19,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AI_PROVIDERS, AIKeyManager, AIProvider, generateAIResponse } from '@/services/aiService';
+import { AI_PROVIDERS, AIKeyManager, AIProvider, generateAIResponse } from '@/services/ai';
 import AIProviderSelector from './ai/AIProviderSelector';
 
 interface AIChatProps {
