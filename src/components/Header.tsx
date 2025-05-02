@@ -11,58 +11,21 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useState } from "react";
-import { Input } from "./ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog";
-import { validateApiKey } from "@/utils/aiUtils";
 import { toast } from "@/components/ui/sonner";
 import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AI_PROVIDERS, AIProvider, AIKeyManager, validateApiKey } from '@/services/aiService';
+import AIProviderSelector from './ai/AIProviderSelector';
 
 const Header = () => {
   const { theme, toggleTheme } = useTheme();
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [apiKey, setApiKey] = useState(localStorage.getItem('openai_api_key') || '');
-  const [isValidatingKey, setIsValidatingKey] = useState(false);
-  const [keyValidationStatus, setKeyValidationStatus] = useState<'none' | 'valid' | 'invalid' | 'checking'>('none');
+  const [activeTab, setActiveTab] = useState("openai");
 
-  const handleValidateApiKey = async () => {
-    if (!apiKey.trim()) {
-      toast.error('Por favor, ingresa una API Key');
-      return;
-    }
-    
-    setIsValidatingKey(true);
-    setKeyValidationStatus('checking');
-    
-    try {
-      const isValid = await validateApiKey(apiKey.trim());
-      
-      if (isValid) {
-        setKeyValidationStatus('valid');
-        toast.success('API Key válida');
-      } else {
-        setKeyValidationStatus('invalid');
-        toast.error('API Key inválida o error de conexión');
-      }
-    } catch (error) {
-      console.error('Error validando la API Key:', error);
-      setKeyValidationStatus('invalid');
-      toast.error('Error al validar la API Key');
-    } finally {
-      setIsValidatingKey(false);
-    }
-  };
-
-  const handleSaveApiKey = () => {
-    if (apiKey.trim() && keyValidationStatus !== 'invalid') {
-      localStorage.setItem('openai_api_key', apiKey);
-      // Set the env variable at runtime
-      (window as any).VITE_OPENAI_API_KEY = apiKey;
-      setSettingsOpen(false);
-      toast.success('API Key guardada correctamente');
-    } else if (keyValidationStatus === 'invalid') {
-      toast.error('No se puede guardar una API Key inválida');
-    }
-  };
+  const hasAnyApiKey = Object.keys(AI_PROVIDERS).some(
+    provider => AIKeyManager.hasApiKey(provider as AIProvider)
+  );
 
   return (
     <header className={`${theme === 'dark' ? 'bg-gradient-app-dark' : 'bg-gradient-app'} text-white p-4 sm:p-6 transition-all duration-300`}>
@@ -98,7 +61,7 @@ const Header = () => {
                 className="text-white hover:text-white/80 relative"
               >
                 <Settings className="h-5 w-5" />
-                {localStorage.getItem('openai_api_key') && (
+                {hasAnyApiKey && (
                   <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-green-500"></span>
                 )}
               </Button>
@@ -109,7 +72,7 @@ const Header = () => {
               <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
                 <div className="flex items-center">
                   <ShieldCheck className="mr-2 h-4 w-4" />
-                  Configurar API de OpenAI
+                  Configurar proveedores de IA
                 </div>
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -131,62 +94,33 @@ const Header = () => {
       </div>
       
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogContent className={theme === 'dark' ? 'bg-gray-800 border-gray-700' : ''}>
+        <DialogContent className={theme === 'dark' ? 'bg-gray-800 border-gray-700 max-w-lg' : 'max-w-lg'}>
           <DialogHeader>
-            <DialogTitle>Configuración de API de OpenAI</DialogTitle>
+            <DialogTitle>Configuración de Proveedores IA</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <p className="text-sm text-muted-foreground">
-              Ingresa tu API Key de OpenAI para activar la funcionalidad avanzada de IA.
-            </p>
-            <div className="space-y-2">
-              <div className="relative">
-                <Input
-                  type="password"
-                  placeholder="sk-..."
-                  value={apiKey}
-                  onChange={(e) => {
-                    setApiKey(e.target.value);
-                    setKeyValidationStatus('none');
-                  }}
-                  className={`${theme === 'dark' ? 'bg-gray-700 border-gray-600' : ''} ${
-                    keyValidationStatus === 'valid' ? 'border-green-500 focus:border-green-500' :
-                    keyValidationStatus === 'invalid' ? 'border-red-500 focus:border-red-500' : ''
-                  }`}
-                />
-                {keyValidationStatus === 'valid' && (
-                  <CheckCircle2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-green-500" />
-                )}
-                {keyValidationStatus === 'invalid' && (
-                  <AlertCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-red-500" />
-                )}
-              </div>
-              <Button
-                variant="outline"
-                onClick={handleValidateApiKey}
-                disabled={!apiKey.trim() || isValidatingKey}
-                className="w-full"
-              >
-                {isValidatingKey ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Validando...
-                  </>
-                ) : "Verificar API Key"}
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Tu API Key se guarda localmente en tu navegador y no se comparte con terceros.
-            </p>
-          </div>
+          
+          <Tabs defaultValue="openai" onValueChange={setActiveTab} value={activeTab}>
+            <TabsList className={`grid w-full grid-cols-${Object.keys(AI_PROVIDERS).length}`}>
+              {Object.entries(AI_PROVIDERS).map(([key, value]) => (
+                <TabsTrigger key={key} value={key} className="relative">
+                  {value.name}
+                  {AIKeyManager.hasApiKey(key as AIProvider) && (
+                    <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-green-500"></span>
+                  )}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            
+            {Object.entries(AI_PROVIDERS).map(([key, value]) => (
+              <TabsContent key={key} value={key} className="mt-4">
+                <AIProviderSelector />
+              </TabsContent>
+            ))}
+          </Tabs>
+          
           <DialogFooter>
             <Button variant="outline" onClick={() => setSettingsOpen(false)}>
-              Cancelar
-            </Button>
-            <Button 
-              onClick={handleSaveApiKey} 
-              disabled={!apiKey.trim() || keyValidationStatus === 'invalid' || isValidatingKey}>
-              Guardar
+              Cerrar
             </Button>
           </DialogFooter>
         </DialogContent>
