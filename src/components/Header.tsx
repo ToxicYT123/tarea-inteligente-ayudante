@@ -70,7 +70,7 @@ const Header = () => {
         <div className="flex items-center gap-4">
           <div className="h-12 w-12 relative overflow-hidden rounded-full border-2 border-white/40 shadow-lg bg-white/10 backdrop-blur-sm flex items-center justify-center">
             <img 
-              src="/haby-logo.png" 
+              src="/lovable-uploads/d275e889-b2ce-4a01-a319-169c5b36b43e.png" 
               alt="HABY" 
               className="h-10 w-10 object-contain"
               onError={(e) => {
