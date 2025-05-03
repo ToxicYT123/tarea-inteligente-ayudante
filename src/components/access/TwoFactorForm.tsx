@@ -23,8 +23,8 @@ const TwoFactorForm: React.FC<TwoFactorFormProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // En una implementación real, esto validaría el OTP contra la clave secreta
-    // Para esta demo, aceptamos cualquier código de 6 dígitos
+    // In a real implementation, this would validate the OTP against the stored secret
+    // For this demo, we accept any 6-digit code
     if (otpValue.length === 6) {
       toast.success("Código de verificación válido. Acceso concedido.");
       onVerify();

@@ -14,30 +14,36 @@ interface TwoFactorAuthProps {
 
 const TwoFactorAuth: React.FC<TwoFactorAuthProps> = ({ onVerify, onCancel }) => {
   const [otpValue, setOtpValue] = useState("");
-  // Usar localStorage para almacenar y recuperar la clave secreta de forma persistente
+  const [qrCodeUrl, setQrCodeUrl] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Use RFC 6238 compliant secret format (Base32 encoded)
   const [secretKey, setSecretKey] = useState(() => {
+    // Get stored key or generate a new one with proper format for TOTP
     const storedKey = localStorage.getItem("2fa_secret_key");
     if (storedKey) return storedKey;
     
-    // Si no hay una clave almacenada, generamos una nueva
-    const randomSecret = Array(16)
-      .fill(0)
-      .map(() => Math.floor(Math.random() * 16).toString(16))
-      .join('');
-      
-    localStorage.setItem("2fa_secret_key", randomSecret);
-    return randomSecret;
+    // Generate a new Base32 encoded secret (RFC 6238 compliant)
+    // This is a simplified version - in production, use a library like 'speakeasy'
+    const allowedChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'; // Base32 character set
+    let newSecret = '';
+    for (let i = 0; i < 16; i++) {
+      newSecret += allowedChars.charAt(Math.floor(Math.random() * allowedChars.length));
+    }
+    
+    localStorage.setItem("2fa_secret_key", newSecret);
+    return newSecret;
   });
-  const [qrCodeUrl, setQrCodeUrl] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
 
-  // Generar código QR basado en la clave secreta persistente
+  // Generate RFC 6238 compliant QR code
   useEffect(() => {
     const generateQRCode = async () => {
       try {
         setIsLoading(true);
-        // Usar la clave secreta existente para generar el código QR
-        const otpAuthUrl = `otpauth://totp/HABYTareaAssist:usuario@example.com?secret=${secretKey}&issuer=HABYTareaAssist`;
+        
+        // Create a proper otpauth URI according to RFC 6238
+        const otpAuthUrl = `otpauth://totp/HABYTareaAssist:usuario@example.com?secret=${secretKey}&issuer=HABYTareaAssist&algorithm=SHA1&digits=6&period=30`;
+        
         const qrCode = await QRCode.toDataURL(otpAuthUrl);
         setQrCodeUrl(qrCode);
       } catch (error) {
@@ -52,11 +58,11 @@ const TwoFactorAuth: React.FC<TwoFactorAuthProps> = ({ onVerify, onCancel }) => 
   }, [secretKey]);
 
   const handleVerify = () => {
-    // En una implementación real, esto validaría el OTP contra la clave secreta
-    // Para esta demo, aceptamos cualquier código de 6 dígitos
+    // In a real implementation, this would validate the OTP against the secret key
+    // For this demo, we accept any 6-digit code for simplicity
     if (otpValue.length === 6) {
       toast.success("Código verificado correctamente");
-      // Guardar en localStorage que 2FA está configurado
+      // Save in localStorage that 2FA is configured
       localStorage.setItem("2fa_enabled", "true");
       localStorage.setItem("2fa_verified", "true");
       onVerify();
@@ -96,7 +102,7 @@ const TwoFactorAuth: React.FC<TwoFactorAuthProps> = ({ onVerify, onCancel }) => 
                 <p className="text-sm mb-2">Clave secreta (si no puedes escanear el código):</p>
                 <div className="bg-muted p-2 rounded-md flex items-center justify-center">
                   <KeyRound className="h-4 w-4 mr-2 text-muted-foreground" />
-                  <code className="font-mono text-sm">{secretKey}</code>
+                  <code className="font-mono text-sm select-all">{secretKey}</code>
                 </div>
               </div>
               
