@@ -35,6 +35,17 @@ const TwoFactorForm: React.FC<TwoFactorFormProps> = ({
     setOtpValue("");
   };
 
+  const handleResetConfig = () => {
+    // Clear 2FA settings to allow setup again
+    localStorage.removeItem("2fa_secret_key");
+    localStorage.removeItem("2fa_enabled");
+    localStorage.removeItem("2fa_verified");
+    
+    // Show the setup screen
+    showSetup();
+    toast.info("Configuración de autenticador reiniciada");
+  };
+
   if (is2FAEnabled && is2FAVerified) {
     return (
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -56,6 +67,14 @@ const TwoFactorForm: React.FC<TwoFactorFormProps> = ({
           </InputOTP>
           <Button type="submit" className="w-full" disabled={otpValue.length !== 6}>
             Verificar
+          </Button>
+          <Button 
+            type="button"
+            variant="outline" 
+            className="w-full text-xs" 
+            onClick={handleResetConfig}
+          >
+            Reiniciar configuración
           </Button>
         </div>
       </form>

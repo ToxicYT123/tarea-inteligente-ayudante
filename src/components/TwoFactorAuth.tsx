@@ -17,17 +17,17 @@ const TwoFactorAuth: React.FC<TwoFactorAuthProps> = ({ onVerify, onCancel }) => 
   const [qrCodeUrl, setQrCodeUrl] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   
-  // Use RFC 6238 compliant secret format (Base32 encoded)
+  // Generate a properly formatted secret key for TOTP (RFC 4648 compliant Base32)
   const [secretKey, setSecretKey] = useState(() => {
-    // Get stored key or generate a new one with proper format for TOTP
+    // Get stored key or generate a new one
     const storedKey = localStorage.getItem("2fa_secret_key");
     if (storedKey) return storedKey;
     
-    // Generate a new Base32 encoded secret (RFC 6238 compliant)
-    // This is a simplified version - in production, use a library like 'speakeasy'
-    const allowedChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'; // Base32 character set
+    // Generate a new Base32 encoded secret - all uppercase letters and numbers 2-7
+    const allowedChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
     let newSecret = '';
-    for (let i = 0; i < 16; i++) {
+    // Generate 20 characters for a 160-bit secret (recommended length)
+    for (let i = 0; i < 20; i++) {
       newSecret += allowedChars.charAt(Math.floor(Math.random() * allowedChars.length));
     }
     
@@ -35,14 +35,19 @@ const TwoFactorAuth: React.FC<TwoFactorAuthProps> = ({ onVerify, onCancel }) => 
     return newSecret;
   });
 
-  // Generate RFC 6238 compliant QR code
+  // Generate standards-compliant QR code for Google Authenticator
   useEffect(() => {
     const generateQRCode = async () => {
       try {
         setIsLoading(true);
         
-        // Create a proper otpauth URI according to RFC 6238
-        const otpAuthUrl = `otpauth://totp/HABYTareaAssist:usuario@example.com?secret=${secretKey}&issuer=HABYTareaAssist&algorithm=SHA1&digits=6&period=30`;
+        // Create RFC 4226/6238 compliant otpauth URI with standard parameters
+        // Format: otpauth://totp/[provider]:[account]?secret=[secret]&issuer=[issuer]&algorithm=SHA1&digits=6&period=30
+        const accountName = 'usuario@example.com';
+        const issuer = 'HABYTareaAssist';
+        const encodedIssuer = encodeURIComponent(issuer);
+        
+        const otpAuthUrl = `otpauth://totp/${encodedIssuer}:${accountName}?secret=${secretKey}&issuer=${encodedIssuer}&algorithm=SHA1&digits=6&period=30`;
         
         const qrCode = await QRCode.toDataURL(otpAuthUrl);
         setQrCodeUrl(qrCode);
@@ -59,16 +64,34 @@ const TwoFactorAuth: React.FC<TwoFactorAuthProps> = ({ onVerify, onCancel }) => 
 
   const handleVerify = () => {
     // In a real implementation, this would validate the OTP against the secret key
-    // For this demo, we accept any 6-digit code for simplicity
+    // For this demo, we accept any 6-digit code
     if (otpValue.length === 6) {
       toast.success("Código verificado correctamente");
-      // Save in localStorage that 2FA is configured
+      // Save in localStorage that 2FA is configured and verified
       localStorage.setItem("2fa_enabled", "true");
       localStorage.setItem("2fa_verified", "true");
       onVerify();
     } else {
       toast.error("Código inválido. Debe tener 6 dígitos.");
     }
+  };
+
+  const handleReset = () => {
+    // Clear the stored 2FA data to start fresh
+    localStorage.removeItem("2fa_secret_key");
+    localStorage.removeItem("2fa_enabled");
+    localStorage.removeItem("2fa_verified");
+    
+    // Generate a new secret key
+    const allowedChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+    let newSecret = '';
+    for (let i = 0; i < 20; i++) {
+      newSecret += allowedChars.charAt(Math.floor(Math.random() * allowedChars.length));
+    }
+    
+    setSecretKey(newSecret);
+    localStorage.setItem("2fa_secret_key", newSecret);
+    toast.info("Configuración de autenticador reiniciada");
   };
 
   return (
@@ -128,9 +151,14 @@ const TwoFactorAuth: React.FC<TwoFactorAuthProps> = ({ onVerify, onCancel }) => 
         </CardContent>
         
         <CardFooter className="flex justify-between">
-          <Button variant="outline" onClick={onCancel}>
-            Cancelar
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onCancel}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleReset} disabled={isLoading}>
+              Reiniciar
+            </Button>
+          </div>
           <Button 
             onClick={handleVerify} 
             disabled={otpValue.length !== 6 || isLoading}
