@@ -24,7 +24,7 @@ const BlockedAccess: React.FC<BlockedAccessProps> = ({ blockTimeLeft }) => {
     setTimeLeft(formatTime(blockTimeLeft));
     
     const interval = setInterval(() => {
-      const newTimeLeft = blockTimeLeft - (1000 * interval);
+      const newTimeLeft = blockTimeLeft - 1000; // Subtract 1 second (1000ms) instead of using interval ID
       if (newTimeLeft <= 0) {
         clearInterval(interval);
         window.location.reload();
