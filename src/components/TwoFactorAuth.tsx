@@ -17,17 +17,17 @@ const TwoFactorAuth: React.FC<TwoFactorAuthProps> = ({ onVerify, onCancel }) => 
   const [qrCodeUrl, setQrCodeUrl] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   
-  // Generate a properly formatted secret key for TOTP (RFC 4648 compliant Base32)
+  // Generar una clave secreta Base32 adecuadamente formateada para TOTP
   const [secretKey, setSecretKey] = useState(() => {
-    // Get stored key or generate a new one
+    // Obtener la clave guardada o generar una nueva
     const storedKey = localStorage.getItem("2fa_secret_key");
     if (storedKey) return storedKey;
     
-    // Generate a new Base32 encoded secret - all uppercase letters and numbers 2-7
+    // Generar una nueva clave Base32 - solo letras mayúsculas y números 2-7 (RFC 4648)
     const allowedChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
     let newSecret = '';
-    // Generate 20 characters for a 160-bit secret (recommended length)
-    for (let i = 0; i < 20; i++) {
+    // Generar 16 caracteres (80 bits) - longitud mínima recomendada
+    for (let i = 0; i < 16; i++) {
       newSecret += allowedChars.charAt(Math.floor(Math.random() * allowedChars.length));
     }
     
@@ -35,15 +35,15 @@ const TwoFactorAuth: React.FC<TwoFactorAuthProps> = ({ onVerify, onCancel }) => 
     return newSecret;
   });
 
-  // Generate standards-compliant QR code for Google Authenticator
+  // Generar código QR compatible con el estándar
   useEffect(() => {
     const generateQRCode = async () => {
       try {
         setIsLoading(true);
         
-        // Create RFC 4226/6238 compliant otpauth URI with standard parameters
-        // Format: otpauth://totp/[provider]:[account]?secret=[secret]&issuer=[issuer]&algorithm=SHA1&digits=6&period=30
-        const accountName = 'usuario@example.com';
+        // Crear URI otpauth conforme a RFC 4226/6238 con parámetros estándar
+        // Formato: otpauth://totp/[proveedor]:[cuenta]?secret=[secreto]&issuer=[emisor]&algorithm=SHA1&digits=6&period=30
+        const accountName = 'usuario@habytareaassist.com';
         const issuer = 'HABYTareaAssist';
         const encodedIssuer = encodeURIComponent(issuer);
         
@@ -63,11 +63,11 @@ const TwoFactorAuth: React.FC<TwoFactorAuthProps> = ({ onVerify, onCancel }) => 
   }, [secretKey]);
 
   const handleVerify = () => {
-    // In a real implementation, this would validate the OTP against the secret key
-    // For this demo, we accept any 6-digit code
+    // En una implementación real, esto validaría el OTP contra la clave secreta
+    // Para esta demostración, aceptamos cualquier código de 6 dígitos
     if (otpValue.length === 6) {
       toast.success("Código verificado correctamente");
-      // Save in localStorage that 2FA is configured and verified
+      // Guardar en localStorage que 2FA está configurado y verificado
       localStorage.setItem("2fa_enabled", "true");
       localStorage.setItem("2fa_verified", "true");
       onVerify();
@@ -77,15 +77,15 @@ const TwoFactorAuth: React.FC<TwoFactorAuthProps> = ({ onVerify, onCancel }) => 
   };
 
   const handleReset = () => {
-    // Clear the stored 2FA data to start fresh
+    // Limpiar los datos 2FA guardados para comenzar de nuevo
     localStorage.removeItem("2fa_secret_key");
     localStorage.removeItem("2fa_enabled");
     localStorage.removeItem("2fa_verified");
     
-    // Generate a new secret key
+    // Generar una nueva clave secreta
     const allowedChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
     let newSecret = '';
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 16; i++) {
       newSecret += allowedChars.charAt(Math.floor(Math.random() * allowedChars.length));
     }
     
@@ -112,7 +112,7 @@ const TwoFactorAuth: React.FC<TwoFactorAuthProps> = ({ onVerify, onCancel }) => 
           ) : (
             <>
               <div className="flex justify-center">
-                <div className="p-2 bg-white rounded-md">
+                <div className="p-4 bg-white rounded-md">
                   <img 
                     src={qrCodeUrl} 
                     alt="QR Code for Google Authenticator" 
@@ -127,6 +127,9 @@ const TwoFactorAuth: React.FC<TwoFactorAuthProps> = ({ onVerify, onCancel }) => 
                   <KeyRound className="h-4 w-4 mr-2 text-muted-foreground" />
                   <code className="font-mono text-sm select-all">{secretKey}</code>
                 </div>
+                <p className="text-xs mt-2 text-muted-foreground">
+                  Si tienes problemas, intenta ingresar la clave manualmente en la app
+                </p>
               </div>
               
               <div className="space-y-2">

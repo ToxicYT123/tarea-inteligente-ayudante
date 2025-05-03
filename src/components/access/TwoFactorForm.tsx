@@ -23,8 +23,8 @@ const TwoFactorForm: React.FC<TwoFactorFormProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // In a real implementation, this would validate the OTP against the stored secret
-    // For this demo, we accept any 6-digit code
+    // En una implementación real, validaría el OTP contra la clave secreta almacenada
+    // Para esta demostración, aceptamos cualquier código de 6 dígitos
     if (otpValue.length === 6) {
       toast.success("Código de verificación válido. Acceso concedido.");
       onVerify();
@@ -36,12 +36,12 @@ const TwoFactorForm: React.FC<TwoFactorFormProps> = ({
   };
 
   const handleResetConfig = () => {
-    // Clear 2FA settings to allow setup again
+    // Limpiar la configuración 2FA para permitir configuración nuevamente
     localStorage.removeItem("2fa_secret_key");
     localStorage.removeItem("2fa_enabled");
     localStorage.removeItem("2fa_verified");
     
-    // Show the setup screen
+    // Mostrar la pantalla de configuración
     showSetup();
     toast.info("Configuración de autenticador reiniciada");
   };
