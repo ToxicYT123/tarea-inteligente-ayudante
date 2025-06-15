@@ -1,4 +1,3 @@
-
 import { AIProvider } from './types';
 
 // Function to validate an API key with the corresponding provider
@@ -33,7 +32,6 @@ async function validateOpenAIKey(apiKey: string): Promise<boolean> {
         'Content-Type': 'application/json'
       }
     });
-    
     return response.status === 200;
   } catch (error) {
     console.error("Error validating OpenAI API key:", error);
@@ -41,16 +39,18 @@ async function validateOpenAIKey(apiKey: string): Promise<boolean> {
   }
 }
 
-// Validate Eden AI key
+// Validate Eden AI key (endpoint fijo: /v2/user, ya que /v2/info no existe o da 404)
 async function validateEdenAIKey(apiKey: string): Promise<boolean> {
   try {
-    const response = await fetch('https://api.edenai.run/v2/info', {
+    // /v2/user es un endpoint público válido para comprobar la key
+    const response = await fetch('https://api.edenai.run/v2/user', {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${apiKey}`
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
       }
     });
-    
+    // EdenAI devuelve 200 si la key es válida, 401 si no lo es
     return response.status === 200;
   } catch (error) {
     console.error("Error validating Eden AI API key:", error);
@@ -68,7 +68,6 @@ async function validateAIMLAPIKey(apiKey: string): Promise<boolean> {
         'Content-Type': 'application/json'
       }
     });
-    
     return response.status === 200;
   } catch (error) {
     console.error("Error validating AIMLAPI API key:", error);
