@@ -1,8 +1,7 @@
 
-// Utilidad para generar un id único tipo uuid v4 (simple, para frontend)
+// Utilidad para generar un id único tipo uuid v4 (solo para frontend/offline)
 export function generateId(): string {
-  // Código simple para generar un UUID v4 (no críptograficamente seguro, para uso frontend)
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
     const r = Math.random() * 16 | 0,
       v = c == 'x' ? r : (r & 0x3 | 0x8);
     return v.toString(16);
@@ -68,4 +67,7 @@ export function filterTasksByDueDate(type: "week" | "upcoming", tasks: Task[] = 
   return [];
 }
 
-console.warn("El archivo taskUtils.ts ahora solo contiene utilidades de fechas y generación de ID.");
+// Puedes añadir otras utilidades si es necesario.
+
+console.warn("El archivo taskUtils.ts contiene utilidades esenciales para manejo de fechas, ids y filtros.");
+
