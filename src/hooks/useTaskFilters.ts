@@ -1,7 +1,7 @@
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Task } from '@/types';
-import { filterTasksByDueDate, isPastDue } from '@/utils/taskUtils';
+import { isPastDue } from '@/utils/taskUtils';
 
 interface FilterState {
   search: string;
@@ -29,25 +29,28 @@ export const useTaskFilters = (tasks: Task[]) => {
     status: 'all',
   });
 
+  // Memoizar sujetos únicos para evitar recalcular en cada render
   const uniqueSubjects = useMemo(() => {
     return [...new Set(tasks.map(task => task.subject))];
   }, [tasks]);
 
+  // Sincronizar búsqueda avanzada con búsqueda básica
   useEffect(() => {
-    if (advancedFilters.search) {
+    if (advancedFilters.search !== searchTerm) {
       setSearchTerm(advancedFilters.search);
     }
   }, [advancedFilters.search]);
 
+  // Memoizar tareas filtradas para mejor performance
   const filteredTasks = useMemo(() => {
     return tasks.filter(task => {
-      // Basic search filter
-      const matchesSearch = 
+      // Filtro de búsqueda básica
+      const matchesSearch = !searchTerm || 
         task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         task.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
         task.subject.toLowerCase().includes(searchTerm.toLowerCase());
       
-      // Basic time filter
+      // Filtro de tiempo básico
       let matchesTimeFilter = true;
       if (filter !== 'all') {
         const today = new Date();
@@ -56,20 +59,22 @@ export const useTaskFilters = (tasks: Task[]) => {
         const dueDate = new Date(task.due_date);
         dueDate.setHours(0, 0, 0, 0);
         
-        if (filter === 'today') {
-          matchesTimeFilter = dueDate.getTime() === today.getTime();
-        } 
-        else if (filter === 'upcoming') {
-          const tomorrow = new Date(today);
-          tomorrow.setDate(today.getDate() + 1);
-          matchesTimeFilter = dueDate >= tomorrow;
-        }
-        else if (filter === 'overdue') {
-          matchesTimeFilter = dueDate < today && !task.completed;
+        switch (filter) {
+          case 'today':
+            matchesTimeFilter = dueDate.getTime() === today.getTime();
+            break;
+          case 'upcoming':
+            const tomorrow = new Date(today);
+            tomorrow.setDate(today.getDate() + 1);
+            matchesTimeFilter = dueDate >= tomorrow;
+            break;
+          case 'overdue':
+            matchesTimeFilter = dueDate < today && !task.completed;
+            break;
         }
       }
       
-      // Advanced filters
+      // Filtros avanzados
       let matchesAdvancedFilters = true;
       
       if (advancedFilters.priority !== 'all') {
@@ -94,44 +99,87 @@ export const useTaskFilters = (tasks: Task[]) => {
       }
       
       if (advancedFilters.status !== 'all') {
-        if (advancedFilters.status === 'completed') {
-          matchesAdvancedFilters = matchesAdvancedFilters && task.completed;
-        } else if (advancedFilters.status === 'pending') {
-          matchesAdvancedFilters = matchesAdvancedFilters && !task.completed;
-        } else if (advancedFilters.status === 'overdue') {
-          matchesAdvancedFilters = matchesAdvancedFilters && isPastDue(task.due_date) && !task.completed;
+        switch (advancedFilters.status) {
+          case 'completed':
+            matchesAdvancedFilters = matchesAdvancedFilters && task.completed;
+            break;
+          case 'pending':
+            matchesAdvancedFilters = matchesAdvancedFilters && !task.completed;
+            break;
+          case 'overdue':
+            matchesAdvancedFilters = matchesAdvancedFilters && isPastDue(task.due_date) && !task.completed;
+            break;
         }
       }
       
       return matchesSearch && matchesTimeFilter && matchesAdvancedFilters;
     }).sort((a, b) => {
-      if (sort === 'dueDate') {
-        return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
-      } else if (sort === 'priority') {
-        const priorityValues = { high: 3, medium: 2, low: 1 };
-        return priorityValues[b.priority] - priorityValues[a.priority];
-      } else if (sort === 'subject') {
-        return a.subject.localeCompare(b.subject);
+      switch (sort) {
+        case 'dueDate':
+          return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+        case 'priority':
+          const priorityValues = { high: 3, medium: 2, low: 1 };
+          return priorityValues[b.priority] - priorityValues[a.priority];
+        case 'subject':
+          return a.subject.localeCompare(b.subject);
+        default:
+          return 0;
       }
-      return 0;
     });
   }, [tasks, searchTerm, filter, sort, advancedFilters]);
 
-  const pendingTasks = filteredTasks.filter(task => !task.completed);
-  const completedTasks = filteredTasks.filter(task => task.completed);
+  // Memoizar tareas separadas por estado
+  const pendingTasks = useMemo(() => 
+    filteredTasks.filter(task => !task.completed), [filteredTasks]
+  );
   
-  const todayCount = filterTasksByDueDate('today').length;
-  const weekCount = filterTasksByDueDate('week').length;
-  const upcomingCount = filterTasksByDueDate('upcoming').length;
+  const completedTasks = useMemo(() => 
+    filteredTasks.filter(task => task.completed), [filteredTasks]
+  );
+  
+  // Contadores para métricas
+  const todayCount = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return tasks.filter(task => {
+      const dueDate = new Date(task.due_date);
+      dueDate.setHours(0, 0, 0, 0);
+      return dueDate.getTime() === today.getTime();
+    }).length;
+  }, [tasks]);
 
-  const handleAdvancedFiltersChange = (filters: FilterState) => {
+  const weekCount = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const nextWeek = new Date(today);
+    nextWeek.setDate(today.getDate() + 7);
+    
+    return tasks.filter(task => {
+      const dueDate = new Date(task.due_date);
+      dueDate.setHours(0, 0, 0, 0);
+      return dueDate > today && dueDate <= nextWeek;
+    }).length;
+  }, [tasks]);
+
+  const upcomingCount = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const nextWeek = new Date(today);
+    nextWeek.setDate(today.getDate() + 7);
+    
+    return tasks.filter(task => {
+      const dueDate = new Date(task.due_date);
+      dueDate.setHours(0, 0, 0, 0);
+      return dueDate > nextWeek;
+    }).length;
+  }, [tasks]);
+
+  // Callbacks para manejar cambios
+  const handleAdvancedFiltersChange = useCallback((filters: FilterState) => {
     setAdvancedFilters(filters);
-    if (filters.search !== searchTerm) {
-      setSearchTerm(filters.search);
-    }
-  };
+  }, []);
   
-  const clearFilters = () => {
+  const clearFilters = useCallback(() => {
     setSearchTerm('');
     setFilter('all');
     setAdvancedFilters({
@@ -144,20 +192,25 @@ export const useTaskFilters = (tasks: Task[]) => {
       subject: 'all',
       status: 'all',
     });
-  };
+  }, []);
   
-  const hasActiveFilters = searchTerm || filter !== 'all' || 
+  // Verificar si hay filtros activos
+  const hasActiveFilters = useMemo(() => 
+    searchTerm || filter !== 'all' || 
     advancedFilters.priority !== 'all' || 
     advancedFilters.dateRange.from || 
     advancedFilters.dateRange.to ||
     advancedFilters.subject !== 'all' ||
-    advancedFilters.status !== 'all';
+    advancedFilters.status !== 'all'
+  , [searchTerm, filter, advancedFilters]);
 
-  const hasAdvancedFilters = advancedFilters.priority !== 'all' || 
+  const hasAdvancedFilters = useMemo(() => 
+    advancedFilters.priority !== 'all' || 
     advancedFilters.dateRange.from || 
     advancedFilters.dateRange.to ||
     advancedFilters.subject !== 'all' ||
-    advancedFilters.status !== 'all';
+    advancedFilters.status !== 'all'
+  , [advancedFilters]);
 
   return {
     searchTerm,
