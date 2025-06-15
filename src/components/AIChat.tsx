@@ -126,7 +126,7 @@ const AIChat: React.FC<AIChatProps> = ({ tasks, onAddTask, onDeleteTask }) => {
       );
       const aiMessage: ChatMessage = {
         id: generateId(),
-        content: response,
+        content: response || "No se pudo obtener respuesta de la IA.",
         sender: 'assistant',
         timestamp: new Date().toISOString()
       };

@@ -53,21 +53,8 @@ export const useTasks = () => {
         return;
       }
       debug('Tareas obtenidas:', data);
-      setTasks((data || []).map((task: any) => ({
-        id: task.id,
-        subject: task.subject,
-        title: task.title,
-        description: task.description || '',
-        due_date: task.due_date,
-        created_at: task.created_at,
-        completed: task.completed ?? false,
-        attachments: task.attachments || [],
-        priority: task.priority as 'low' | 'medium' | 'high',
-        academic_context_id: task.academic_context_id,
-        assignment_type: task.assignment_type,
-        updated_at: task.updated_at,
-      })));
-      toast.success('Tareas actualizadas', { duration: 1300 });
+      setTasks((data || []).map(mapSupabaseTask));
+      toast.success('Tareas actualizadas', { duration:1300 });
     } catch (err: any) {
       debug("Error inesperado al cargar tareas", err);
       setError('Error inesperado');
@@ -104,20 +91,7 @@ export const useTasks = () => {
         return false;
       }
       debug('Tarea agregada:', data);
-      setTasks(prev => [...prev, {
-        id: data.id,
-        subject: data.subject,
-        title: data.title,
-        description: data.description || '',
-        due_date: data.due_date,
-        created_at: data.created_at,
-        completed: data.completed ?? false,
-        attachments: [],
-        priority: data.priority as 'low' | 'medium' | 'high',
-        academic_context_id: data.academic_context_id,
-        assignment_type: data.assignment_type,
-        updated_at: data.updated_at,
-      }]);
+      setTasks(prev => [...prev, mapSupabaseTask(data)]);
       toast.success('Tarea agregada correctamente');
       return true;
     } catch (err: any) {

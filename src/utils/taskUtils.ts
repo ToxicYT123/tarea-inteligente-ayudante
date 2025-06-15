@@ -1,4 +1,3 @@
-
 // Utilidad para generar un id único tipo uuid v4 (solo para frontend/offline)
 export function generateId(): string {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
@@ -44,9 +43,7 @@ import type { Task } from '@/types';
 export function filterTasksByDueDate(type: "week" | "upcoming", tasks: Task[] = []): Task[] {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-
   if (type === "week") {
-    // Tareas para esta semana (hasta domingo)
     const weekEnd = new Date(today);
     weekEnd.setDate(today.getDate() + (7 - today.getDay()));
     return tasks.filter(task => {
@@ -55,7 +52,6 @@ export function filterTasksByDueDate(type: "week" | "upcoming", tasks: Task[] = 
       return due >= today && due <= weekEnd && !task.completed;
     });
   } else if (type === "upcoming") {
-    // Próximamente (después de esta semana)
     const weekEnd = new Date(today);
     weekEnd.setDate(today.getDate() + (7 - today.getDay()));
     return tasks.filter(task => {
@@ -70,4 +66,3 @@ export function filterTasksByDueDate(type: "week" | "upcoming", tasks: Task[] = 
 // Puedes añadir otras utilidades si es necesario.
 
 console.warn("El archivo taskUtils.ts contiene utilidades esenciales para manejo de fechas, ids y filtros.");
-

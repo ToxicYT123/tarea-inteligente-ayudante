@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Task } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,16 +13,16 @@ interface TaskStatsProps {
 const TaskStats: React.FC<TaskStatsProps> = ({ tasks }) => {
   const { theme } = useTheme();
   
-  // Estadísticas de estado
-  const completedCount = tasks.filter(task => task.completed).length;
-  const pendingCount = tasks.length - completedCount;
+  // Robust counting avoids undefined/null issues and uses props.tasks directly
+  const completedCount = tasks.filter(task => !!task.completed).length;
+  const pendingCount = tasks.filter(task => !task.completed).length;
   
   const statusData = [
     { name: 'Completadas', value: completedCount, color: theme === 'dark' ? '#22c55e' : '#16a34a' },
     { name: 'Pendientes', value: pendingCount, color: theme === 'dark' ? '#f87171' : '#ef4444' },
   ];
   
-  // Estadísticas por prioridad
+  // Usar filtro robusto con tasks como argumento
   const highPriorityCount = tasks.filter(task => task.priority === 'high').length;
   const mediumPriorityCount = tasks.filter(task => task.priority === 'medium').length;
   const lowPriorityCount = tasks.filter(task => task.priority === 'low').length;
@@ -34,10 +33,10 @@ const TaskStats: React.FC<TaskStatsProps> = ({ tasks }) => {
     { name: 'Baja', value: lowPriorityCount, color: theme === 'dark' ? '#4ade80' : '#22c55e' },
   ];
   
-  // Estadísticas por fecha de vencimiento
+  // Usar filtro robusto con tasks como argumento
   const todayCount = tasks.filter(task => isToday(task.due_date)).length;
-  const weekCount = filterTasksByDueDate('week').length;
-  const upcomingCount = filterTasksByDueDate('upcoming').length;
+  const weekCount = filterTasksByDueDate('week', tasks).length;
+  const upcomingCount = filterTasksByDueDate('upcoming', tasks).length;
   const overdueCount = tasks.filter(task => isPastDue(task.due_date) && !task.completed).length;
   
   const timelineData = [

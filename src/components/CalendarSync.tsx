@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Task } from '@/types';
 import { Button } from "@/components/ui/button";
@@ -28,9 +27,8 @@ const CalendarSync: React.FC<CalendarSyncProps> = ({ tasks }) => {
   const { theme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
 
-  // Función para generar un archivo iCal (.ics)
+  // Función de generación iCal robusta para fechas
   const generateICalFile = () => {
-    // Encabezado estándar de iCal
     let icalContent = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
@@ -38,17 +36,12 @@ const CalendarSync: React.FC<CalendarSyncProps> = ({ tasks }) => {
       'CALSCALE:GREGORIAN',
       'METHOD:PUBLISH',
     ];
-
-    // Agregar cada tarea como un evento
     tasks.forEach(task => {
-      // Convertir fecha de vencimiento a formato UTC para iCal
       const dueDate = new Date(task.due_date);
       const year = dueDate.getFullYear();
       const month = String(dueDate.getMonth() + 1).padStart(2, '0');
       const day = String(dueDate.getDate()).padStart(2, '0');
       const formattedDate = `${year}${month}${day}`;
-      
-      // Crear evento
       icalContent = [
         ...icalContent,
         'BEGIN:VEVENT',
@@ -60,26 +53,18 @@ const CalendarSync: React.FC<CalendarSyncProps> = ({ tasks }) => {
         'END:VEVENT',
       ];
     });
-
-    // Cerrar el calendario
     icalContent.push('END:VCALENDAR');
-    
-    // Generar el archivo
     const blob = new Blob([icalContent.join('\r\n')], { type: 'text/calendar' });
     const url = URL.createObjectURL(blob);
-    
-    // Crear un enlace para descarga y activarlo
     const link = document.createElement('a');
     link.href = url;
     link.download = 'tareas_haby.ics';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
     toast.success("Archivo de calendario generado", {
       description: "Puedes importarlo en Google Calendar, Outlook o Apple Calendar"
     });
-    
     setIsOpen(false);
   };
 
