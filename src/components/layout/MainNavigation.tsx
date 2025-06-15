@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const MainNavigation: React.FC = () => {
-  const { theme, setTheme } = useTheme();
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <nav className={`sticky top-0 z-50 border-b backdrop-blur-lg transition-all duration-300 ${
@@ -39,7 +39,7 @@ const MainNavigation: React.FC = () => {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              onClick={toggleTheme}
               className="h-9 w-9"
             >
               {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
