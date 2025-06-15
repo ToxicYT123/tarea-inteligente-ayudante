@@ -1,25 +1,14 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Task, ChatMessage } from '@/types';
-import { generateId } from '@/utils/taskUtils';
-import { MessageSquare, Loader2, Settings, History, Key, Trash2 } from 'lucide-react';
+
+import React, { useRef } from 'react';
+import { Task } from '@/types';
 import ChatContainer from './chat/ChatContainer';
-import { toast } from "@/components/ui/sonner";
 import { useTheme } from "@/hooks/use-theme";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { InfoIcon } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AI_PROVIDERS, AIKeyManager, AIProvider, generateAIResponse } from '@/services/ai';
+import { MessageSquare, Settings, InfoIcon } from 'lucide-react';
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import AIProviderSelector from './ai/AIProviderSelector';
+import AIProviderSettings from './ai/AIProviderSettings';
+import { useAIChat } from '@/hooks/useAIChat';
 
 interface AIChatProps {
   tasks: Task[];
@@ -27,146 +16,28 @@ interface AIChatProps {
   onDeleteTask?: (taskId: string) => void;
 }
 
-// Simple encryption and decryption functions for local storage
-const encryptApiKey = (key: string): string => {
-  // This is a simple obfuscation, not true encryption
-  return btoa(key.split('').reverse().join(''));
-};
-
-const decryptApiKey = (encryptedKey: string): string => {
-  try {
-    return atob(encryptedKey).split('').reverse().join('');
-  } catch (e) {
-    return '';
-  }
-};
-
 const AIChat: React.FC<AIChatProps> = ({ tasks, onAddTask, onDeleteTask }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: generateId(),
-      content: "¡Hola! Soy tu asistente para tareas. Puedo ayudarte a gestionar tus tareas, incluso crearlas o eliminarlas. Prueba diciendo 'crear tarea de matemáticas para mañana' o 'qué tareas tengo para hoy'.",
-      sender: 'assistant',
-      timestamp: new Date().toISOString()
-    }
-  ]);
-  
-  const [isTyping, setIsTyping] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  // Mostramos el formulario si NO hay API Key para el proveedor seleccionado
-  const [showApiConfig, setShowApiConfig] = useState<boolean>(
-    !AIKeyManager.hasApiKey(AIKeyManager.getSelectedProvider())
-  );
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const { theme } = useTheme();
-  const [selectedProvider, setSelectedProvider] = useState<AIProvider>(AIKeyManager.getSelectedProvider());
-  // Forzar recarga cuando cambie configuración de IA
-  const [aiKeyVersion, setAiKeyVersion] = useState(0);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  // Al cambiar provider, actualizar si hay API Key y el estado
-  useEffect(() => {
-    const hasKey = AIKeyManager.hasApiKey(selectedProvider);
-    setShowApiConfig(!hasKey);
-    setAiKeyVersion((v) => v + 1); // Forzar recarga de funciones bajo el provider
-  }, [selectedProvider]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const handleRemoveApiKey = (provider: AIProvider, e: React.MouseEvent) => {
-    e.stopPropagation();
-    AIKeyManager.setApiKey(provider, '');
-    toast.success(`API Key de ${AI_PROVIDERS[provider].name} eliminada`);
-    if (provider === selectedProvider) {
-      setShowApiConfig(true);
-      setAiKeyVersion((v) => v + 1);
-    }
-  };
-
-  const handleNewMessage = async (input: string) => {
-    const userMessage: ChatMessage = {
-      id: generateId(),
-      content: input,
-      sender: 'user',
-      timestamp: new Date().toISOString()
-    };
-    setMessages(prev => [...prev, userMessage]);
-    setIsTyping(true);
-    try {
-      // Detectar si hay clave
-      const apiKey = AIKeyManager.getApiKey(selectedProvider);
-      if (!apiKey) {
-        setShowApiConfig(true);
-        setIsTyping(false);
-        toast.error("Por favor, configura tu API Key para usar el asistente IA.");
-        return;
-      }
-      // Generar respuesta IA
-      const response = await generateAIResponse(
-        input.trim(), 
-        tasks,
-        (newTask) => {
-          if (onAddTask) {
-            onAddTask(newTask);
-            toast.success("Tarea creada correctamente por la IA");
-          }
-        },
-        (taskId) => {
-          if (onDeleteTask) {
-            onDeleteTask(taskId);
-            toast.success("Tarea eliminada correctamente por la IA");
-          }
-        },
-        selectedProvider
-      );
-      const aiMessage: ChatMessage = {
-        id: generateId(),
-        content: response || "No se pudo obtener respuesta de la IA.",
-        sender: 'assistant',
-        timestamp: new Date().toISOString()
-      };
-      setMessages(prev => [...prev, aiMessage]);
-    } catch (error) {
-      console.error('Error al procesar el mensaje:', error);
-      const errorMessage: ChatMessage = {
-        id: generateId(),
-        content: "Lo siento, hubo un error procesando tu mensaje. Revisa tu API Key o intenta de nuevo.",
-        sender: 'assistant',
-        timestamp: new Date().toISOString()
-      };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsTyping(false);
-    }
-  };
-
-  const handleProviderChange = (provider: AIProvider) => {
-    setSelectedProvider(provider);
-    AIKeyManager.setSelectedProvider(provider);
-    const hasKey = AIKeyManager.hasApiKey(provider);
-    setShowApiConfig(!hasKey);
-    setAiKeyVersion((v) => v + 1);
-    // Mensaje de confirmación
-    if (hasKey && provider !== selectedProvider) {
-      const infoMessage: ChatMessage = {
-        id: generateId(),
-        content: `Proveedor IA cambiado a ${AI_PROVIDERS[provider].name}.`,
-        sender: 'assistant',
-        timestamp: new Date().toISOString()
-      };
-      setMessages(prev => [...prev, infoMessage]);
-    }
-  };
+  const {
+    messages,
+    isTyping,
+    showSettings,
+    setShowSettings,
+    showApiConfig,
+    setShowApiConfig,
+    selectedProvider,
+    setSelectedProvider,
+    aiKeyVersion,
+    setAiKeyVersion,
+    handleNewMessage,
+  } = useAIChat({ tasks, onAddTask, onDeleteTask });
 
   return (
     <div className={`flex flex-col rounded-lg border shadow-md h-[500px] transition-all duration-300 ${
-      theme === 'dark' 
-        ? 'bg-gray-800/90 border-gray-700' 
+      theme === 'dark'
+        ? 'bg-gray-800/90 border-gray-700'
         : 'bg-white/90 backdrop-blur-sm border-gray-200'
     }`}>
       <div className={`p-4 border-b flex items-center justify-between ${
@@ -176,84 +47,20 @@ const AIChat: React.FC<AIChatProps> = ({ tasks, onAddTask, onDeleteTask }) => {
       }`}>
         <div className="flex items-center space-x-2">
           <MessageSquare className="h-5 w-5" />
-          <h2 className="font-medium">Asistente TareaAssist ({AI_PROVIDERS[selectedProvider].name})</h2>
+          <h2 className="font-medium">Asistente TareaAssist</h2>
         </div>
-        <Dialog open={showSettings} onOpenChange={setShowSettings}>
-          <DialogTrigger asChild>
-            <Button variant="ghost" size="icon" className="text-white hover:bg-white/20">
-              <Settings className="h-4 w-4" />
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Configuración de la IA</DialogTitle>
-              <DialogDescription>
-                Configura y selecciona el proveedor de IA para el asistente.
-              </DialogDescription>
-            </DialogHeader>
-            <Tabs defaultValue="providers" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="providers">Proveedores</TabsTrigger>
-                <TabsTrigger value="config">Configuración</TabsTrigger>
-              </TabsList>
-              <TabsContent value="providers" className="space-y-4 py-4">
-                <div className="grid gap-4">
-                  {Object.entries(AI_PROVIDERS).map(([key, value]) => {
-                    const provider = key as AIProvider;
-                    const hasApiKey = AIKeyManager.hasApiKey(provider);
-                    return (
-                      <div
-                        key={key}
-                        className={`p-4 rounded-lg border cursor-pointer ${
-                          selectedProvider === provider 
-                            ? theme === 'dark'
-                              ? 'bg-gray-700 border-tareaassist-dark-primary'
-                              : 'bg-purple-50 border-purple-500'
-                            : theme === 'dark'
-                              ? 'bg-gray-800 border-gray-700 hover:bg-gray-700'
-                              : 'bg-white border-gray-200 hover:bg-gray-50'
-                        }`}
-                        onClick={() => handleProviderChange(provider)}
-                      >
-                        <div className="flex justify-between items-center">
-                          <div className="space-y-1">
-                            <h3 className="font-medium">{value.name}</h3>
-                            <p className="text-xs text-muted-foreground">{value.description}</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {hasApiKey && (
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-6 w-6"
-                                onClick={(e) => handleRemoveApiKey(provider, e)}
-                              >
-                                <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
-                              </Button>
-                            )}
-                            {hasApiKey && <div className="h-2 w-2 bg-green-500 rounded-full"></div>}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </TabsContent>
-              <TabsContent value="config">
-                <AIProviderSelector onClose={() => {
-                  setShowApiConfig(false);
-                  setAiKeyVersion((v) => v + 1);
-                }} />
-              </TabsContent>
-            </Tabs>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowSettings(false)}>
-                Cerrar
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <Button variant="ghost" size="icon" className="text-white hover:bg-white/20" onClick={() => setShowSettings(true)}>
+          <Settings className="h-4 w-4" />
+        </Button>
       </div>
+      <AIProviderSettings
+        open={showSettings}
+        onOpenChange={setShowSettings}
+        selectedProvider={selectedProvider}
+        onProviderChange={setSelectedProvider}
+        setShowApiConfig={setShowApiConfig}
+        setAiKeyVersion={setAiKeyVersion}
+      />
       {showApiConfig ? (
         <div className="flex-1 p-4 flex flex-col justify-center items-center">
           <div className={`max-w-md w-full p-5 rounded-xl border shadow-sm ${theme === 'dark' ? 'border-gray-700 bg-gray-800/70' : 'border-gray-200 bg-white/80'}`}>
@@ -274,7 +81,7 @@ const AIChat: React.FC<AIChatProps> = ({ tasks, onAddTask, onDeleteTask }) => {
               }} />
               <p className="text-xs text-center text-muted-foreground mt-2">
                 Si no tienes una API Key, puedes seguir usando el asistente básico sin conectar a un proveedor de IA.{' '}
-                <button 
+                <button
                   onClick={() => setShowApiConfig(false)}
                   className="text-primary hover:underline"
                 >
@@ -285,7 +92,7 @@ const AIChat: React.FC<AIChatProps> = ({ tasks, onAddTask, onDeleteTask }) => {
           </div>
         </div>
       ) : (
-        <ChatContainer 
+        <ChatContainer
           messages={messages}
           isTyping={isTyping}
           onNewMessage={handleNewMessage}
